@@ -161,8 +161,7 @@ footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:26px}
     </div>
   </details>
 
-  <footer>Sumber data: Google Sheet "HOTCOMP REPORT" (tab Input Harian) · Klik "Update data (CSV)" untuk memuat file CSV terbaru, atau minta Claude menarik ulang data dari Sheet dan memperbarui dashboard ini.<br>
-  Catatan: halaman ini tidak bisa menarik data Google Sheets secara live saat dibuka di browser (dibatasi kebijakan keamanan) — pembaruan dilakukan lewat unggah CSV atau permintaan ke Claude.</footer>
+  <footer>Sumber data: Google Sheet "HOTCOMP REPORT" (tab Input Harian). Data diperbarui otomatis setiap 30 detik.</footer>
 </div>
 
 <script>
@@ -213,12 +212,24 @@ function parseCSV(text){
 function loadData(text){
   ROWS = parseCSV(text);
   HOTELS = [...new Set(ROWS.map(r=>r.hotel))];
-  selectedHotels = new Set(HOTELS);
-  buildChips();
+  
+  // Hanya reset seleksi hotel jika ini load pertama atau jika ada hotel baru
+  if (selectedHotels.size === 0 || HOTELS.some(h => !document.querySelector(`.chip:not(.active)[textContent="${h}"]`))) {
+    selectedHotels = new Set(HOTELS);
+    buildChips();
+  }
+  
   const dates = ROWS.map(r=>r.date.getTime());
   const toInput = d => new Date(d).toISOString().slice(0,10);
-  document.getElementById('dateFrom').value = toInput(Math.min(...dates));
-  document.getElementById('dateTo').value = toInput(Math.max(...dates));
+  
+  // Set default filter tanggal jika belum diset
+  if (!document.getElementById('dateFrom').value) {
+    document.getElementById('dateFrom').value = toInput(Math.min(...dates));
+  }
+  if (!document.getElementById('dateTo').value) {
+    document.getElementById('dateTo').value = toInput(Math.max(...dates));
+  }
+  
   populatePeriodFilters();
   render();
   renderMTD();
@@ -230,10 +241,20 @@ function buildChips(){
   box.innerHTML = '';
   HOTELS.forEach(h=>{
     const c = document.createElement('div');
-    c.className = 'chip active' + (h===SELF_HOTEL ? ' self' : '');
+    c.className = 'chip ' + (selectedHotels.has(h) ? 'active' : '') + (h===SELF_HOTEL && selectedHotels.has(h) ? ' self' : '');
     c.textContent = h;
-    c.onclick = ()=>{ selectedHotels.has(h) ? selectedHotels.delete(h) : selectedHotels.add(h);
-      c.classList.toggle('active'); render(); };
+    c.onclick = ()=>{ 
+      if (selectedHotels.has(h)) {
+        selectedHotels.delete(h);
+        c.classList.remove('active');
+        if (h===SELF_HOTEL) c.classList.remove('self');
+      } else {
+        selectedHotels.add(h);
+        c.classList.add('active');
+        if (h===SELF_HOTEL) c.classList.add('self');
+      }
+      render(); 
+    };
     box.appendChild(c);
   });
 }
@@ -280,15 +301,20 @@ function tableRowsHtml(rows, city, cityOcc, cityArr, cityRevpar){
 }
 
 function renderMTD(){
-  const m = +document.getElementById('mtdMonth').value;
-  const y = +document.getElementById('mtdYear').value;
+  const mSel = document.getElementById('mtdMonth');
+  const ySel = document.getElementById('mtdYear');
+  if(!mSel.value || !ySel.value) return;
+  const m = +mSel.value;
+  const y = +ySel.value;
   const subset = ROWS.filter(r=> r.date.getMonth()+1===m && r.date.getFullYear()===y);
   const {rows, city, cityOcc, cityArr, cityRevpar} = aggregateRows(subset);
   document.getElementById('mtdTbody').innerHTML = tableRowsHtml(rows, city, cityOcc, cityArr, cityRevpar);
 }
 
 function renderYTD(){
-  const y = +document.getElementById('ytdYear').value;
+  const ySel = document.getElementById('ytdYear');
+  if(!ySel.value) return;
+  const y = +ySel.value;
   const subset = ROWS.filter(r=> r.date.getFullYear()===y);
   const {rows, city, cityOcc, cityArr, cityRevpar} = aggregateRows(subset);
   document.getElementById('ytdTbody').innerHTML = tableRowsHtml(rows, city, cityOcc, cityArr, cityRevpar);
@@ -298,14 +324,25 @@ function populatePeriodFilters(){
   const years = [...new Set(ROWS.map(r=>r.date.getFullYear()))].sort();
   const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
   const lastDate = ROWS.reduce((a,r)=>r.date>a?r.date:a, ROWS[0].date);
+  
   const monthSel = document.getElementById('mtdMonth');
+  const currMonth = monthSel.value;
   monthSel.innerHTML = months.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  
   const yearOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  document.getElementById('mtdYear').innerHTML = yearOpts;
-  document.getElementById('ytdYear').innerHTML = yearOpts;
-  monthSel.value = lastDate.getMonth()+1;
-  document.getElementById('mtdYear').value = lastDate.getFullYear();
-  document.getElementById('ytdYear').value = lastDate.getFullYear();
+  const mtdYearSel = document.getElementById('mtdYear');
+  const ytdYearSel = document.getElementById('ytdYear');
+  
+  const currMtdYear = mtdYearSel.value;
+  const currYtdYear = ytdYearSel.value;
+  
+  mtdYearSel.innerHTML = yearOpts;
+  ytdYearSel.innerHTML = yearOpts;
+  
+  // Set nilai awal jika belum diset, atau pertahankan pilihan pengguna jika sudah ada
+  monthSel.value = currMonth || lastDate.getMonth()+1;
+  mtdYearSel.value = currMtdYear || lastDate.getFullYear();
+  ytdYearSel.value = currYtdYear || lastDate.getFullYear();
 }
 
 function render(){
@@ -373,10 +410,11 @@ function render(){
   });
 }
 
-const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
+
+// --- AUTO UPDATE GOOGLE SHEET INTEGRATION ---
 
 const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
-const SHEET_NAME = "input harian"; // Nama sheet yang mau ditarik datanya
+const SHEET_NAME = "input harian"; 
 
 function setLiveStatus(state, note){
   const el = document.getElementById('liveStatus');
@@ -402,14 +440,14 @@ async function fetchSheetData() {
 
     // Jika yang dikembalikan adalah halaman HTML login Google, berarti Sheet belum diset Public
     if (csvText.trim().toLowerCase().startsWith("<!doctype html>")) {
-      throw new Error('🔴 Sheet masih Private. Ubah akses Share ke "Anyone with the link".');
+      throw new Error('🔴 Akses Ditolak: Sheet masih Private. Ubah ke "Anyone with the link".');
     }
 
     loadData(csvText);
     setLiveStatus('live', `🟢 Live — Diperbarui pada ${new Date().toLocaleTimeString()}`);
   } catch (error) {
     console.error(error);
-    setLiveStatus('error', error.message);
+    setLiveStatus('error', error.message || '🔴 Gagal memuat data live');
   }
 }
 
@@ -417,3 +455,27 @@ function initLiveSync(){
   fetchSheetData(); // Tarik data saat halaman pertama kali dibuka
   setInterval(fetchSheetData, 30000); // Lakukan auto-update setiap 30 detik
 }
+
+// ---------------------------------------------
+
+document.getElementById('dateFrom').addEventListener('change', render);
+document.getElementById('dateTo').addEventListener('change', render);
+document.getElementById('mtdMonth').addEventListener('change', renderMTD);
+document.getElementById('mtdYear').addEventListener('change', renderMTD);
+document.getElementById('ytdYear').addEventListener('change', renderYTD);
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    loadData(ev.target.result);
+    setLiveStatus('live', `🟢 Memakai data CSV yang diunggah`);
+  };
+  reader.readAsText(f);
+});
+
+// Jalankan load data awal dan mulai proses sinkronisasi live
+loadData(DEFAULT_CSV);
+initLiveSync();
+</script>
+</body>
+</html>
