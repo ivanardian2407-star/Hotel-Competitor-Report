@@ -26,9 +26,14 @@ header p{color:var(--muted);margin-top:4px;font-size:.92rem}
 .live-badge{font-size:.75rem;color:var(--muted);margin-bottom:6px;background:var(--card);padding:6px 12px;border-radius:20px;border:1px solid var(--line);display:inline-block}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:24px}
-.panel-head{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+.panel-head{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
 .panel-head h2{color:var(--gold-soft);font-size:1.4rem}
 .panel-head p.subtitle{color:var(--muted);font-size:.85rem;margin-top:4px;}
+
+/* Input Filters CSS */
+.dates{display:flex;gap:10px;align-items:center}
+.dates input,.dates select{background:var(--navy-950);border:1px solid var(--line);color:var(--ink);padding:8px 12px;border-radius:7px;font-family:'Inter', sans-serif;font-size:.85rem;cursor:pointer}
+.dates input:focus,.dates select:focus{outline:none;border-color:var(--gold)}
 
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
 .chip{border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:.8rem;cursor:pointer;user-select:none;color:var(--muted);background:var(--navy-950)}
@@ -74,8 +79,13 @@ footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:26px}
   <!-- PANEL TODAY -->
   <div class="panel" id="panelToday">
     <div class="panel-head">
-      <h2>Hari Terakhir (Today)</h2>
-      <p class="subtitle" id="todayDateStr">Memuat tanggal...</p>
+      <div>
+        <h2>Hari Terakhir (Today)</h2>
+        <p class="subtitle" id="todayDateStr">Memuat tanggal...</p>
+      </div>
+      <div class="dates">
+        <input type="date" id="filterTodayDate">
+      </div>
     </div>
     <div class="insight-box" id="insightToday">Memuat analisa...</div>
     <div class="charts">
@@ -87,8 +97,14 @@ footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:26px}
   <!-- PANEL MTD -->
   <div class="panel" id="panelMTD">
     <div class="panel-head">
-      <h2>Month to Date (MTD)</h2>
-      <p class="subtitle" id="mtdDateStr">Memuat bulan...</p>
+      <div>
+        <h2>Month to Date (MTD)</h2>
+        <p class="subtitle" id="mtdDateStr">Memuat bulan...</p>
+      </div>
+      <div class="dates">
+        <select id="filterMtdMonth"></select>
+        <select id="filterMtdYear"></select>
+      </div>
     </div>
     <div class="insight-box" id="insightMTD">Memuat analisa...</div>
     <div class="charts">
@@ -100,8 +116,13 @@ footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:26px}
   <!-- PANEL YTD -->
   <div class="panel" id="panelYTD">
     <div class="panel-head">
-      <h2>Year to Date (YTD)</h2>
-      <p class="subtitle" id="ytdDateStr">Memuat tahun...</p>
+      <div>
+        <h2>Year to Date (YTD)</h2>
+        <p class="subtitle" id="ytdDateStr">Memuat tahun...</p>
+      </div>
+      <div class="dates">
+        <select id="filterYtdYear"></select>
+      </div>
     </div>
     <div class="insight-box" id="insightYTD">Memuat analisa...</div>
     <div class="charts">
@@ -129,6 +150,7 @@ const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
 const SHEET_NAME = "input harian"; 
 const SELF_HOTEL = "Noormans";
 const PALETTE = ['#d6a656','#4f7fb8','#5fbf8f','#e2725b','#9a7fd1','#4fb8b0','#c98f4f','#7f9ac9','#c96f9a'];
+const MONTH_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
 let ROWS = [], HOTELS = [], selectedHotels = new Set();
 let chartInstances = {};
@@ -140,6 +162,10 @@ const fmt2 = n => (isFinite(n)?n:0).toFixed(2);
 const toDateObj = (str) => {
   const [d,m,y] = str.trim().split('/').map(Number);
   return new Date(y,m-1,d);
+};
+const toInputDate = d => {
+  const z = n => ('0'+n).slice(-2);
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
 };
 
 // --- DATA PARSING & AGGREGATION ---
@@ -207,87 +233,140 @@ function drawChart(id, type, data, options) {
 const defaultOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8fa3c4'}}}, scales:{x:{ticks:{color:'#8fa3c4'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#8fa3c4'},grid:{color:'rgba(255,255,255,.05)'}}}};
 const pieOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#8fa3c4'}}}, borderwidth:0};
 
-// --- RENDER LOGIC ---
-function renderAll() {
-  if(!ROWS.length) return;
+
+// --- UI FILTERS ---
+function initFilters() {
+  const filterToday = document.getElementById('filterTodayDate');
+  const filterMtdM = document.getElementById('filterMtdMonth');
+  const filterMtdY = document.getElementById('filterMtdYear');
+  const filterYtdY = document.getElementById('filterYtdYear');
   
-  // Find latest date in dataset
+  // Jika filter sudah terisi (pengguna sudah memilih), tidak perlu dioverwrite saat live sync.
+  if(filterToday.value) return; 
+  
+  const years = [...new Set(ROWS.map(r=>r.date.getFullYear()))].sort((a,b)=>b-a);
   const latestTime = Math.max(...ROWS.map(r=>r.date.getTime()));
   const latestDate = new Date(latestTime);
-  const m = latestDate.getMonth(), y = latestDate.getFullYear();
-  const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-  
-  // Filter base on Selected Hotels
-  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
-  
-  // 1. TODAY DATA
-  const todayRows = filteredRows.filter(r => r.date.getTime() === latestTime);
-  const todayData = aggregateRows(todayRows);
-  document.getElementById('todayDateStr').textContent = `${latestDate.getDate()} ${months[m]} ${y}`;
-  renderToday(todayData);
 
-  // 2. MTD DATA
-  const mtdRows = filteredRows.filter(r => r.date.getMonth() === m && r.date.getFullYear() === y);
-  const mtdData = aggregateRows(mtdRows);
-  document.getElementById('mtdDateStr').textContent = `1 - ${latestDate.getDate()} ${months[m]} ${y}`;
-  renderMTD(mtdRows, mtdData);
+  // Set default filters to the latest date available in data
+  filterToday.value = toInputDate(latestDate);
+  
+  filterMtdM.innerHTML = MONTH_NAMES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  filterMtdM.value = latestDate.getMonth();
+  
+  const yearOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  filterMtdY.innerHTML = yearOpts;
+  filterMtdY.value = latestDate.getFullYear();
+  
+  filterYtdY.innerHTML = yearOpts;
+  filterYtdY.value = latestDate.getFullYear();
 
-  // 3. YTD DATA
-  const ytdRows = filteredRows.filter(r => r.date.getFullYear() === y);
-  const ytdData = aggregateRows(ytdRows);
-  document.getElementById('ytdDateStr').textContent = `Januari - ${months[m]} ${y}`;
-  renderYTD(ytdData);
+  // Attach Events
+  filterToday.addEventListener('change', renderTodayWrapper);
+  filterMtdM.addEventListener('change', renderMtdWrapper);
+  filterMtdY.addEventListener('change', renderMtdWrapper);
+  filterYtdY.addEventListener('change', renderYtdWrapper);
 }
 
+
+// --- RENDER LOGIC WRAPPERS ---
+function renderAll() {
+  if(!ROWS.length) return;
+  renderTodayWrapper();
+  renderMtdWrapper();
+  renderYtdWrapper();
+}
+
+function renderTodayWrapper() {
+  const dateVal = document.getElementById('filterTodayDate').value;
+  if(!dateVal) return;
+  
+  const [y, m, d] = dateVal.split('-').map(Number);
+  const targetTime = new Date(y, m-1, d).getTime();
+  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
+  
+  const todayRows = filteredRows.filter(r => r.date.getTime() === targetTime);
+  const todayData = aggregateRows(todayRows);
+  
+  const contextStr = `${d} ${MONTH_NAMES[m-1]} ${y}`;
+  document.getElementById('todayDateStr').textContent = contextStr;
+  renderToday(todayData, contextStr);
+}
+
+function renderMtdWrapper() {
+  const m = parseInt(document.getElementById('filterMtdMonth').value);
+  const y = parseInt(document.getElementById('filterMtdYear').value);
+  
+  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
+  const mtdRows = filteredRows.filter(r => r.date.getMonth() === m && r.date.getFullYear() === y);
+  const mtdData = aggregateRows(mtdRows);
+  
+  const contextStr = `Bulan ${MONTH_NAMES[m]} ${y}`;
+  document.getElementById('mtdDateStr').textContent = contextStr;
+  renderMTD(mtdRows, mtdData, contextStr);
+}
+
+function renderYtdWrapper() {
+  const y = parseInt(document.getElementById('filterYtdYear').value);
+  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
+  const ytdRows = filteredRows.filter(r => r.date.getFullYear() === y);
+  const ytdData = aggregateRows(ytdRows);
+  
+  const contextStr = `Tahun ${y}`;
+  document.getElementById('ytdDateStr').textContent = contextStr;
+  renderYTD(ytdData, contextStr);
+}
+
+
+// --- PANEL RENDERING ---
 function generateAnalysisText(data, contextStr) {
-    if(!data.rows.length) return "Tidak ada data.";
+    if(!data.rows.length) return "Tidak ada data pada periode ini.";
     const bestRgi = data.rows[0];
     const bestOcc = [...data.rows].sort((a,b)=>b.occ-a.occ)[0];
     const bestShare = [...data.rows].sort((a,b)=>b.act-a.act)[0];
     const self = data.rows.find(r=>r.hotel===SELF_HOTEL);
     
-    let t = `Berdasarkan data <b>${contextStr}</b>, rata-rata tingkat hunian (Occupancy) pasar berada di <b>${fmt2(data.cityOcc)}%</b> dengan total pendapatan mencapai <b>Rp ${fmtN(data.city.rev)}</b>. `;
+    let t = `Berdasarkan data <b>${contextStr}</b>, rata-rata tingkat hunian pasar berada di <b>${fmt2(data.cityOcc)}%</b> dengan total pendapatan mencapai <b>Rp ${fmtN(data.city.rev)}</b>. `;
     
-    t += `Hotel <b>${bestRgi.hotel}</b> memimpin indeks RevPAR (RGI: ${fmt2(bestRgi.rgi)}), sementara <b>${bestShare.hotel}</b> menguasai pasar dengan porsi terjual (Actual Share) sebesar <b>${fmt2(bestShare.act)}%</b>. `;
+    t += `Hotel <b>${bestRgi.hotel}</b> memimpin indeks RevPAR (RGI: ${fmt2(bestRgi.rgi)}), sementara <b>${bestShare.hotel}</b> menguasai pasar dengan porsi terjual (Actual Share) <b>${fmt2(bestShare.act)}%</b>. `;
     
     if(self) {
         let fairStatus = self.fair >= 0 ? `surplus <b>+${fmt2(self.fair)}%</b> di atas` : `defisit <b>${fmt2(self.fair)}%</b> di bawah`;
-        t += `Untuk <b>${SELF_HOTEL}</b> sendiri mencatat Occupancy sebesar <b>${fmt2(self.occ)}%</b> dengan perolehan pangsa pasar yang ${fairStatus} porsi kewajarannya (Fair Share).`;
+        t += `Untuk <b>${SELF_HOTEL}</b> mencatat Occupancy <b>${fmt2(self.occ)}%</b> dengan perolehan pangsa pasar yang ${fairStatus} porsi kewajarannya (Fair Share).`;
     }
     return t;
 }
 
-function renderToday(data) {
-  document.getElementById('insightToday').innerHTML = generateAnalysisText(data, "Hari Ini");
-  if(!data.rows.length) return;
+function renderToday(data, contextStr) {
+  document.getElementById('insightToday').innerHTML = generateAnalysisText(data, contextStr);
   
-  // Bar Chart - RevPAR
+  if(!data.rows.length) {
+    if(chartInstances['chartTodayRevpar']) chartInstances['chartTodayRevpar'].destroy();
+    if(chartInstances['chartTodayShare']) chartInstances['chartTodayShare'].destroy();
+    return;
+  }
+  
   const sorted = [...data.rows].sort((a,b)=>b.revpar-a.revpar);
   drawChart('chartTodayRevpar', 'bar', {
     labels: sorted.map(r=>r.hotel),
-    datasets: [{
-      label: 'RevPAR (Rp)',
-      data: sorted.map(r=>r.revpar),
-      backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488')
-    }]
+    datasets: [{ label: 'RevPAR (Rp)', data: sorted.map(r=>r.revpar), backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488') }]
   }, defaultOpts);
   
-  // Doughnut Chart - Actual Share
   drawChart('chartTodayShare', 'doughnut', {
     labels: data.rows.map(r=>r.hotel),
-    datasets: [{
-      data: data.rows.map(r=>r.act),
-      backgroundColor: PALETTE,
-      borderColor: '#081426', borderWidth: 2
-    }]
+    datasets: [{ data: data.rows.map(r=>r.act), backgroundColor: PALETTE, borderColor: '#081426', borderWidth: 2 }]
   }, pieOpts);
 }
 
-function renderMTD(rawRows, data) {
-  document.getElementById('insightMTD').innerHTML = generateAnalysisText(data, "Bulan Ini (MTD)");
-  if(!data.rows.length) return;
+function renderMTD(rawRows, data, contextStr) {
+  document.getElementById('insightMTD').innerHTML = generateAnalysisText(data, contextStr);
+  
+  if(!data.rows.length) {
+    if(chartInstances['chartMtdOcc']) chartInstances['chartMtdOcc'].destroy();
+    if(chartInstances['chartMtdRev']) chartInstances['chartMtdRev'].destroy();
+    return;
+  }
 
-  // Line Chart - Occupancy Trend
   const dateStrs = [...new Set(rawRows.map(r=>r.dateStr))].sort((a,b)=>toDateObj(a)-toDateObj(b));
   const lineDatasets = data.hotels.map((h,i) => {
     const dailyOcc = dateStrs.map(ds => {
@@ -303,47 +382,37 @@ function renderMTD(rawRows, data) {
   
   drawChart('chartMtdOcc', 'line', { labels: dateStrs, datasets: lineDatasets }, defaultOpts);
 
-  // Bar Chart - Total Revenue MTD
   const sorted = [...data.rows].sort((a,b)=>b.rev-a.rev);
   drawChart('chartMtdRev', 'bar', {
     labels: sorted.map(r=>r.hotel),
-    datasets: [{
-      label: 'Room Revenue (Rp)',
-      data: sorted.map(r=>r.rev),
-      backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488')
-    }]
+    datasets: [{ label: 'Room Revenue (Rp)', data: sorted.map(r=>r.rev), backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488') }]
   }, defaultOpts);
 }
 
-function renderYTD(data) {
-  document.getElementById('insightYTD').innerHTML = generateAnalysisText(data, "Tahun Ini (YTD)");
-  if(!data.rows.length) return;
+function renderYTD(data, contextStr) {
+  document.getElementById('insightYTD').innerHTML = generateAnalysisText(data, contextStr);
+  
+  if(!data.rows.length) {
+    if(chartInstances['chartYtdRgi']) chartInstances['chartYtdRgi'].destroy();
+    if(chartInstances['chartYtdShare']) chartInstances['chartYtdShare'].destroy();
+    document.getElementById('ytdTbody').innerHTML = `<tr><td colspan="13" style="text-align:center">Tidak ada data</td></tr>`;
+    return;
+  }
 
-  // Bar Chart - RGI
   const sorted = [...data.rows].sort((a,b)=>b.rgi-a.rgi);
   let opts = JSON.parse(JSON.stringify(defaultOpts));
-  opts.indexAxis = 'y'; // horizontal bar
+  opts.indexAxis = 'y'; 
   
   drawChart('chartYtdRgi', 'bar', {
     labels: sorted.map(r=>r.hotel),
-    datasets: [{
-      label: 'RGI (Index > 1.0 is Good)',
-      data: sorted.map(r=>r.rgi),
-      backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488')
-    }]
+    datasets: [{ label: 'RGI', data: sorted.map(r=>r.rgi), backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488') }]
   }, opts);
 
-  // Pie Chart - YTD Actual Share
   drawChart('chartYtdShare', 'pie', {
     labels: data.rows.map(r=>r.hotel),
-    datasets: [{
-      data: data.rows.map(r=>r.act),
-      backgroundColor: PALETTE,
-      borderColor: '#081426', borderWidth: 2
-    }]
+    datasets: [{ data: data.rows.map(r=>r.act), backgroundColor: PALETTE, borderColor: '#081426', borderWidth: 2 }]
   }, pieOpts);
   
-  // Table YTD
   const html = data.rows.map(r=>`<tr class="${r.hotel===SELF_HOTEL?'self':''}">
     <td>${r.hotel}</td><td>${fmtN(r.avail)}</td><td>${fmtN(r.sold)}</td><td>${fmt2(r.occ)}</td>
     <td>${fmtN(r.arr)}</td><td>${fmtN(r.revpar)}</td><td>${fmtN(r.rev)}</td>
@@ -406,7 +475,9 @@ async function fetchSheetData() {
           buildChips();
       }
       
+      initFilters(); // Render dropdowns with available data first
       renderAll();
+      
       setLiveStatus('live', `🟢 Live — Update terakhir: ${new Date().toLocaleTimeString('id-ID')}`);
     } else {
       setLiveStatus('error', '🔴 Format CSV tidak sesuai atau kosong');
@@ -420,7 +491,7 @@ async function fetchSheetData() {
 
 // Start sequence
 fetchSheetData(); 
-setInterval(fetchSheetData, 30000); // 30 seconds auto-refresh
+setInterval(fetchSheetData, 30000); 
 
 </script>
 </body>
