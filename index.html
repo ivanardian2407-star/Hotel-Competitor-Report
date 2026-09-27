@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* TEMA NAVY & SLATE */
         body { background-color: #0f172a; color: #f8fafc; } 
         .card-panel { background-color: #1e293b; border-color: #334155; } 
         
@@ -18,7 +17,6 @@
         .tab-inactive { color: #94a3b8; font-weight: 500; }
         .tab-inactive:hover { color: #e2e8f0; }
         
-        /* Custom Table Styling (Dark Mode) */
         .report-table th { background-color: #0f172a; color: #cbd5e1; position: sticky; top: 0; z-index: 10; font-size: 11px; text-transform: uppercase; border: 1px solid #334155; padding: 10px 4px; text-align: center; }
         .report-table td { font-size: 12px; border: 1px solid #334155; padding: 8px 8px; text-align: right; white-space: nowrap; }
         .report-table td:first-child { text-align: left; font-weight: 600; color: #e2e8f0; }
@@ -235,6 +233,25 @@
             }
         }
 
+        // Fungsi normalisasi tanggal agar kompatibel dengan berbagai format input browser
+        function normalizeDate(rawDateStr) {
+            if (!rawDateStr) return '';
+            let cleanStr = rawDateStr.trim();
+            // Jika format spreadsheet sudah YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+                return cleanStr;
+            }
+            // Coba parsing ke object Date untuk mengantisipasi format lain
+            let d = new Date(cleanStr);
+            if (!isNaN(d.getTime())) {
+                let year = d.getFullYear();
+                let month = String(d.getMonth() + 1).padStart(2, '0');
+                let day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            return cleanStr;
+        }
+
         function processRawData(data) {
             let headerIdx = -1;
             for (let i = 0; i < data.length; i++) {
@@ -248,8 +265,10 @@
                 if (!row[0] || row[0].trim() === '') continue; 
                 if (isNaN(parseFloat(row[2]))) continue; 
 
+                let normalized = normalizeDate(row[0]);
+
                 processed.push({
-                    tanggal: row[0].trim(), // Ambil string asli YYYY-MM-DD
+                    tanggal: normalized, // Selalu format YYYY-MM-DD standar
                     hotel: row[1].trim(),
                     available: parseFloat(row[2]) || 0,
                     roomSold: parseFloat(row[3]) || 0,
@@ -263,28 +282,24 @@
         function setupFilters() {
             if (rawData.length === 0) return;
 
-            // 1. Ekstrak Semua Teks Tanggal Unik Secara Presisi
-            const uniqueDates = [...new Set(rawData.map(d => d.tanggal))].sort().reverse(); // Format YYYY-MM-DD (Terbaru di atas)
-            const latestDate = uniqueDates[0];
-            const oldestDate = uniqueDates[uniqueDates.length - 1];
+            const uniqueDates = [...new Set(rawData.map(d => d.tanggal))].sort();
+            const oldestDate = uniqueDates[0];
+            const latestDate = uniqueDates[uniqueDates.length - 1];
 
-            // 2. Setup Filter Harian (Limit Kalender)
             const harianInput = document.getElementById('filter-harian');
             harianInput.min = oldestDate;
             harianInput.max = latestDate;
-            harianInput.value = latestDate;
+            harianInput.value = latestDate; // Set default ke tanggal paling baru
 
-            // 3. Ekstrak Semua Bulan Unik (YYYY-MM)
-            const uniqueMonths = [...new Set(rawData.map(d => d.tanggal.substring(0, 7)))].sort().reverse();
-            const latestMonth = uniqueMonths[0];
-            const oldestMonth = uniqueMonths[uniqueMonths.length - 1];
+            const uniqueMonths = [...new Set(rawData.map(d => d.tanggal.substring(0, 7)))].sort();
+            const latestMonth = uniqueMonths[uniqueMonths.length - 1];
+            const oldestMonth = uniqueMonths[0];
             
             const mtdInput = document.getElementById('filter-mtd');
             mtdInput.min = oldestMonth;
             mtdInput.max = latestMonth;
             mtdInput.value = latestMonth;
 
-            // 4. Ekstrak Semua Tahun Unik (YYYY)
             const uniqueYears = [...new Set(rawData.map(d => d.tanggal.substring(0, 4)))].sort().reverse();
             const ytdSelect = document.getElementById('filter-ytd');
             ytdSelect.innerHTML = '';
@@ -295,7 +310,6 @@
             });
             if (uniqueYears.length > 0) ytdSelect.value = uniqueYears[0];
 
-            // 5. Update UI Info Range
             document.getElementById('data-range-info').innerHTML = `<i class="fas fa-info-circle mr-1"></i>Data tersedia: ${oldestDate} s/d ${latestDate}`;
 
             updateDashboard();
@@ -313,13 +327,13 @@
         function updateDashboard() {
             let filteredData = [];
             if (currentTab === 'harian') {
-                const f = document.getElementById('filter-harian').value;
+                const f = document.getElementById('filter-harian').value; // Mengambil nilai YYYY-MM-DD dari input date browser
                 filteredData = rawData.filter(d => d.tanggal === f);
             } else if (currentTab === 'mtd') {
-                const f = document.getElementById('filter-mtd').value;
+                const f = document.getElementById('filter-mtd').value; // Mengambil nilai YYYY-MM
                 filteredData = rawData.filter(d => d.tanggal.startsWith(f));
             } else if (currentTab === 'ytd') {
-                const f = document.getElementById('filter-ytd').value;
+                const f = document.getElementById('filter-ytd').value; // Mengambil nilai YYYY
                 filteredData = rawData.filter(d => d.tanggal.startsWith(f));
             }
 
