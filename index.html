@@ -241,7 +241,7 @@
 <script>
 /* ================= CONFIG ================= */
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU/export?format=csv&gid=1609483300";
-const AUTO_SYNC_MS = 5 * 60 * 1000; // 5 menit
+const AUTO_SYNC_MS = 1 * 60 * 1000; // 1 menit
 const PROXIES = [
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
   u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
@@ -464,7 +464,7 @@ async function loadData(manual){
     dot.className='dot ok';
     const now = new Date();
     txt.textContent = 'Tersinkron ' + now.toLocaleTimeString('id-ID');
-    sub.textContent = (manual?'Sinkronisasi manual · ':'Auto-sync 5 menit · ') + ROWS.length.toLocaleString('id-ID') + ' baris data';
+    sub.textContent = (manual?'Sinkronisasi manual · ':'Auto-sync 1 menit · ') + ROWS.length.toLocaleString('id-ID') + ' baris data';
   }
   buildFilters();
   renderAll();
