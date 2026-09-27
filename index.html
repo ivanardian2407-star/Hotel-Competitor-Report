@@ -1,581 +1,836 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Competitor Dashboard - Navy Edition</title>
-    <!-- Library Eksternal -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #0f172a; color: #f8fafc; } 
-        .card-panel { background-color: #1e293b; border-color: #334155; } 
-        
-        .tab-active { border-bottom: 3px solid #38bdf8; color: #38bdf8; font-weight: 700; }
-        .tab-inactive { color: #94a3b8; font-weight: 500; }
-        .tab-inactive:hover { color: #e2e8f0; }
-        
-        .report-table th { background-color: #0f172a; color: #cbd5e1; position: sticky; top: 0; z-index: 10; font-size: 11px; text-transform: uppercase; border: 1px solid #334155; padding: 10px 4px; text-align: center; }
-        .report-table td { font-size: 12px; border: 1px solid #334155; padding: 8px 8px; text-align: right; white-space: nowrap; }
-        .report-table td:first-child { text-align: left; font-weight: 600; color: #e2e8f0; }
-        .row-oaktree { background-color: rgba(16, 185, 129, 0.15) !important; border-left: 3px solid #10b981; } 
-        .row-city { background-color: #020617; font-weight: bold; color: #f1f5f9; }
-        .row-avg { background-color: #0f172a; font-weight: bold; color: #94a3b8; }
-        .section-header { background-color: #334155 !important; color: #f8fafc; text-align: left !important; font-weight: bold; font-size: 13px !important; padding: 8px 12px !important;}
-        .col-rgi { background-color: rgba(56, 189, 248, 0.05); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Performance Dashboard — Auto Sync Google Sheets</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a1128; --bg2:#0f1b3d; --card:#111c36; --card2:#16234a; --ink:#e8eefc; --muted:#8ea3c8; --line:#233357;
+    --indigo:#818cf8; --sky:#38bdf8; --green:#34d399; --amber:#fbbf24; --red:#f87171;
+    --violet:#a78bfa; --pink:#f472b6; --teal:#2dd4bf; --orange:#fb923c; --gold:#f5c451;
+    --shadow:0 2px 6px rgba(2,6,23,.5),0 12px 32px rgba(2,6,23,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-gradient(1200px 800px at 80% -10%,#1b2a5e 0%,var(--bg) 55%) fixed;color:var(--ink);min-height:100vh}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 20px 60px}
 
-        ::-webkit-scrollbar { height: 8px; width: 8px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-    </style>
+  /* HEADER */
+  header{background:linear-gradient(120deg,#060b1f 0%,#12235c 45%,#1d3a8f 80%,#0c4a6e 100%);color:#fff;padding:28px 0 96px;border-bottom:1px solid #24366b}
+  .hrow{max-width:1320px;margin:0 auto;padding:0 20px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+  .brand h1{font-size:23px;font-weight:800;letter-spacing:-.3px}
+  .brand h1 .gold{color:var(--gold)}
+  .brand p{font-size:13px;opacity:.8;margin-top:4px}
+  .syncbox{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 14px;backdrop-filter:blur(6px)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);animation:pulse 1.4s infinite}
+  .dot.ok{background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.22);animation:none}
+  .dot.err{background:var(--red);box-shadow:0 0 0 4px rgba(248,113,113,.25);animation:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .syncbox small{font-size:11.5px;opacity:.85}
+  #syncText{font-size:12.5px;font-weight:700}
+  button.btn{background:var(--gold);color:#1e293b;border:none;border-radius:10px;padding:9px 18px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;transition:.15s}
+  button.btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(245,196,81,.35)}
+  button.btn:disabled{opacity:.6;cursor:wait}
+
+  /* TABS */
+  .tabs{max-width:1320px;margin:-52px auto 0;padding:0 20px;display:flex;gap:10px;position:relative;z-index:2;flex-wrap:wrap}
+  .tab{flex:1;min-width:170px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 18px;cursor:pointer;text-align:left;font-family:inherit;transition:.18s;box-shadow:var(--shadow);color:var(--ink)}
+  .tab:hover{transform:translateY(-3px);border-color:#3b4f8f}
+  .tab.active{background:linear-gradient(120deg,var(--gold),#f59e0b);color:#1e293b;border-color:transparent}
+  .tab .t1{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;opacity:.65}
+  .tab .t2{font-size:15.5px;font-weight:800;margin-top:3px}
+  .tab .t3{font-size:11.5px;opacity:.7;margin-top:2px}
+
+  /* FILTERS */
+  .filterbar{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:24px 0 4px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
+  .fgroup{display:flex;flex-direction:column;gap:5px}
+  .fgroup label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  select{padding:10px 13px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--card2);outline:none;min-width:170px;cursor:pointer}
+  select:focus{border-color:var(--sky)}
+  select option{background:#0f1b3d;color:#e8eefc}
+  .finfo{margin-left:auto;font-size:12px;color:var(--muted);text-align:right;line-height:1.6}
+  .finfo b{color:var(--gold)}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
+  .kpi{background:linear-gradient(150deg,var(--card) 60%,var(--card2));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ac,#818cf8)}
+  .kpi .lbl{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .kpi .val{font-size:26px;font-weight:800;margin-top:8px;letter-spacing:-.5px}
+  .kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
+  .delta{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;margin-top:8px}
+  .delta.up{background:rgba(52,211,153,.15);color:#6ee7b7;border:1px solid rgba(52,211,153,.35)}
+  .delta.down{background:rgba(248,113,113,.13);color:#fca5a5;border:1px solid rgba(248,113,113,.35)}
+  .tip{cursor:help;width:15px;height:15px;border-radius:50%;background:#2b3d6e;color:#c7d2fe;font-size:10px;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
+
+  /* GRID & CARDS */
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+  .card h3{font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .card .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .c6{grid-column:span 6}.c12{grid-column:span 12}.c4{grid-column:span 4}.c8{grid-column:span 8}
+  @media(max-width:900px){.c6,.c4,.c8{grid-column:span 12}}
+  .chartbox{position:relative;height:300px;margin-top:12px}
+  .chartbox.tall{height:350px}
+  .chartbox.short{height:260px}
+
+  /* INSIGHT */
+  .insight{background:linear-gradient(120deg,rgba(129,140,248,.12),rgba(56,189,248,.08));border:1px solid #2b3d6e;border-radius:18px;padding:16px 18px;margin-bottom:14px}
+  .insight h4{font-size:13.5px;font-weight:800;color:#c7d2fe;display:flex;align-items:center;gap:7px;margin-bottom:9px}
+  .insight ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .insight li{font-size:12.8px;color:#b8c5e4;padding-left:18px;position:relative;line-height:1.6}
+  .insight li::before{content:'▸';position:absolute;left:0;color:var(--gold);font-weight:800}
+  .insight b{color:var(--ink)}
+
+  /* TABLE — TITOR REPORT */
+  table{width:100%;border-collapse:collapse;font-size:12.3px;margin-top:12px}
+  th{background:#16234a;text-align:left;padding:10px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#9fb0d8;border-bottom:2px solid var(--line);white-space:nowrap}
+  td{padding:9px 10px;border-bottom:1px solid #1a2a52;color:#dbe4f7}
+  tr:hover td{background:rgba(56,189,248,.05)}
+  td.num,th.num{text-align:right}
+  td.ctr,th.ctr{text-align:center}
+  .pill{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .pill.hi{background:rgba(52,211,153,.15);color:#6ee7b7}.pill.mid{background:rgba(251,191,36,.13);color:#fcd34d}.pill.lo{background:rgba(248,113,113,.13);color:#fca5a5}
+  .tscroll{overflow-x:auto}
+  .rankbadge{display:inline-flex;width:22px;height:22px;border-radius:7px;background:#2b3d6e;color:#c7d2fe;align-items:center;justify-content:center;font-weight:800;font-size:11px}
+  .rankbadge.top1{background:var(--gold);color:#1e293b}.rankbadge.top2{background:#cbd5e1;color:#1e293b}.rankbadge.top3{background:#d97706;color:#fff}
+  tr.cityrow td{background:rgba(245,196,81,.08);font-weight:800;color:var(--gold);border-top:2px solid #3b4f8f}
+  tr.avgrow td{background:rgba(56,189,248,.06);font-weight:700;color:#9fd8f8}
+  tr.neg td{color:#fda4af}
+  .report-title{background:linear-gradient(120deg,#f59e0b,#fbbf24);color:#1e293b;font-weight:800;font-size:13px;padding:10px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:8px;margin-top:4px}
+  .legend-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);background:var(--card2);border:1px solid var(--line);border-radius:99px;padding:3px 10px;margin-top:8px}
+
+  .foot{margin-top:30px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8}
+  .defs{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center}
+  .def{background:var(--card);border:1px dashed #33477e;border-radius:14px;padding:11px 15px;font-size:11.8px;color:#9fb0d8;max-width:310px;text-align:left}
+  .def b{color:var(--ink)}
+</style>
 </head>
-<body class="font-sans antialiased">
+<body>
 
-    <div id="loading" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-center transition-opacity duration-300">
-        <i class="fas fa-circle-notch fa-spin text-5xl text-sky-400 mb-4"></i>
-        <h2 class="text-xl font-bold text-white">Menyinkronkan Data...</h2>
-        <p class="text-slate-400 mt-2">Membaca tanggal pada Sheet Input Harian</p>
+<header>
+  <div class="hrow">
+    <div class="brand">
+      <h1>🏨 Hotel Performance <span class="gold">Dashboard</span></h1>
+      <p>Panel analisa indikator hotel · auto-sync langsung dari Google Spreadsheet Anda</p>
     </div>
+    <div class="syncbox">
+      <span class="dot" id="syncDot"></span>
+      <div>
+        <div id="syncText">Menyinkronkan…</div>
+        <small id="syncSub">Sumber: Google Sheets (live CSV)</small>
+      </div>
+      <button class="btn" id="btnSync" onclick="loadData(true)">⟳ Sync Sekarang</button>
+    </div>
+  </div>
+</header>
 
-    <header class="card-panel border-b px-8 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-40 gap-4">
-        <div class="flex items-center gap-4 w-full md:w-auto">
-            <div class="bg-gradient-to-br from-sky-400 to-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-900/50">
-                <i class="fas fa-chart-line text-2xl"></i>
-            </div>
-            <div>
-                <h1 class="text-2xl font-bold leading-tight text-white tracking-wide">MARKET INTELLIGENCE</h1>
-                <p class="text-xs text-sky-400 font-semibold tracking-wider uppercase">Auto-Sync • Oak Tree Emerald</p>
-            </div>
-        </div>
-        <button onclick="fetchData()" class="bg-slate-700 text-sky-400 hover:bg-slate-600 hover:text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition shadow-sm border border-slate-600 w-full md:w-auto flex justify-center items-center">
-            <i class="fas fa-sync-alt mr-2"></i>Refresh Data
-        </button>
-    </header>
+<div class="tabs">
+  <button class="tab active" data-tab="today" onclick="switchTab('today')">
+    <div class="t1">Tab 1</div><div class="t2">📅 Laporan Harian</div><div class="t3">Analisa 1 hari (Today) + filter tanggal</div>
+  </button>
+  <button class="tab" data-tab="mtd" onclick="switchTab('mtd')">
+    <div class="t1">Tab 2</div><div class="t2">🗓️ Laporan MTD</div><div class="t3">Month-to-Date · filter bulan & tahun</div>
+  </button>
+  <button class="tab" data-tab="ytd" onclick="switchTab('ytd')">
+    <div class="t1">Tab 3</div><div class="t2">📆 Laporan YTD</div><div class="t3">Year-to-Date · filter tahun</div>
+  </button>
+</div>
 
-    <main class="max-w-[1400px] mx-auto px-4 md:px-8 py-8">
-        
-        <div class="card-panel rounded-2xl shadow-xl border p-5 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div class="flex flex-wrap gap-6 border-b border-slate-600 w-full lg:w-auto">
-                <button onclick="switchTab('harian')" id="tab-harian" class="tab-active pb-3 px-2 text-lg uppercase tracking-wide">Harian</button>
-                <button onclick="switchTab('mtd')" id="tab-mtd" class="tab-inactive pb-3 px-2 text-lg uppercase tracking-wide">MTD (Month)</button>
-                <button onclick="switchTab('ytd')" id="tab-ytd" class="tab-inactive pb-3 px-2 text-lg uppercase tracking-wide">YTD (Year)</button>
-            </div>
-            
-            <div class="flex flex-col items-end gap-1 w-full md:w-auto">
-                <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700 w-full md:w-auto justify-between">
-                    <span class="text-sm font-semibold text-slate-400 px-2"><i class="fas fa-filter mr-1"></i> FILTER:</span>
-                    <input type="date" id="filter-harian" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none w-full md:w-auto" onchange="updateDashboard()">
-                    <input type="month" id="filter-mtd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden w-full md:w-auto" onchange="updateDashboard()">
-                    <select id="filter-ytd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden w-full md:w-32" onchange="updateDashboard()"></select>
-                </div>
-                <span id="data-range-info" class="text-[11px] text-sky-400 font-medium pr-1"></span>
-            </div>
-        </div>
+<div class="wrap">
 
-        <div id="no-data" class="hidden bg-rose-900/30 text-rose-400 p-8 text-center rounded-2xl border border-rose-800 shadow-sm mt-8">
-            <i class="fas fa-folder-open text-5xl mb-4 opacity-70"></i>
-            <h3 class="text-xl font-bold">Data Tidak Ditemukan</h3>
-            <p class="mt-2 text-rose-300">Belum ada input data pada tanggal atau periode yang Anda pilih.</p>
-        </div>
+  <!-- ============ TAB HARIAN ============ -->
+  <section id="tab-today">
+    <div class="filterbar">
+      <div class="fgroup"><label>Pilih Tanggal</label><select id="fDate" onchange="renderToday()"></select></div>
+      <div class="fgroup"><label>Cari Hotel</label><select id="fHotelToday" onchange="renderToday()"><option value="">Semua Hotel</option></select></div>
+      <div class="finfo" id="todayInfo"></div>
+    </div>
+    <div class="kpis" id="kpiToday"></div>
+    <div class="insight"><h4>💡 Insight Edukatif — Hari Ini</h4><ul id="insightToday"></ul></div>
+    <div class="grid">
+      <div class="card c8"><h3>📋 Laporan Lengkap Hari Ini</h3><div class="sub">TITOR REPORT: Natural Share vs Actual Share, MPI, ARI, RGI & peringkat kompetitif</div>
+        <div class="tscroll"><table id="tblToday"></table></div>
+        <span class="legend-chip">🟢 RGI ≥ 1.00 = mengambil porsi pasar sesuai/lebih dari potensi</span>
+        <span class="legend-chip">🔴 Fair Share negatif = kehilangan porsi pasar</span>
+      </div>
+      <div class="card c4"><h3>🧭 Panduan Membaca Laporan</h3><div class="sub" style="margin-top:10px;line-height:1.95;font-size:12.3px;color:#9fb0d8">
+        • <b>Natural Share</b>: porsi kamar Anda vs total kota (potensi pasar).<br>
+        • <b>Actual Share</b>: porsi kamar terjual Anda vs total kota.<br>
+        • <b>Fair Share</b> = Actual − Natural. Negatif = pasar "dicuri" kompetitor.<br>
+        • <b>M.P.I</b> (Market Penetration Index) = Occp hotel ÷ Occp kota. &gt;1 = lebih penuh dari pasar.<br>
+        • <b>A.R.I</b> (Average Rate Index) = ARR hotel ÷ ARR kota. &gt;1 = harga premium berhasil.<br>
+        • <b>R.G.I</b> (Revenue Generation Index) = RevPAR hotel ÷ RevPAR kota. <b>Inilah skor akhirnya.</b>
+      </div></div>
+      <div class="card c6"><h3>💰 Room Revenue per Hotel</h3><div class="sub">Kontributor pendapatan terbesar hari ini</div><div class="chartbox short"><canvas id="chRevToday"></canvas></div></div>
+      <div class="card c6"><h3>📊 Okupansi vs Benchmark 70%</h3><div class="sub">Garis putus-putus merah = target industri pariwisata</div><div class="chartbox short"><canvas id="chOccToday"></canvas></div></div>
+      <div class="card c4"><h3>🍩 Komposisi Revenue</h3><div class="sub">Porsi tiap hotel terhadap total hari ini</div><div class="chartbox short"><canvas id="chDonutToday"></canvas></div></div>
+      <div class="card c4"><h3>⚖️ ARR vs RevPAR</h3><div class="sub">Harga jual (batang) vs hasil per kamar tersedia (garis)</div><div class="chartbox short"><canvas id="chArrRevToday"></canvas></div></div>
+      <div class="card c4"><h3>🏆 Skor Kompetitif RGI</h3><div class="sub">Garis emas = parity 1.00 dengan rata-rata pasar</div><div class="chartbox short"><canvas id="chRgiToday"></canvas></div></div>
+      <div class="card c12"><h3>📈 Proyeksi & Forecast</h3><div class="sub">Estimasi performa hari ini di-run-rate ke 30 hari (untuk konteks target bulanan)</div>
+        <div class="tscroll"><table id="tblFcToday"></table></div></div>
+    </div>
+  </section>
 
-        <div id="dashboard-content">
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                    <h4 class="text-slate-400 text-sm font-bold mb-1 uppercase tracking-wider">Market Total Rev.</h4>
-                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-revenue">Rp 0</p>
-                    <i class="fas fa-wallet absolute right-4 bottom-4 text-4xl text-slate-700 opacity-50"></i>
-                </div>
-                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden bg-emerald-900/20">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-                    <h4 class="text-emerald-400 text-sm font-bold mb-1 uppercase tracking-wider">Oak Tree Revenue</h4>
-                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-oak-rev">Rp 0</p>
-                    <i class="fas fa-hand-holding-usd absolute right-4 bottom-4 text-4xl text-emerald-900 opacity-50"></i>
-                </div>
-                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden bg-emerald-900/20">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-                    <h4 class="text-amber-400 text-sm font-bold mb-1 uppercase tracking-wider">Oak Tree Occ.</h4>
-                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-oak-occ">0%</p>
-                    <i class="fas fa-door-open absolute right-4 bottom-4 text-4xl text-amber-900 opacity-30"></i>
-                </div>
-                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden bg-emerald-900/20">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
-                    <h4 class="text-purple-400 text-sm font-bold mb-1 uppercase tracking-wider">Oak Tree R.G.I</h4>
-                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-oak-rgi">0.00</p>
-                    <i class="fas fa-chart-bar absolute right-4 bottom-4 text-4xl text-purple-900 opacity-40"></i>
-                </div>
-            </div>
+  <!-- ============ TAB MTD ============ -->
+  <section id="tab-mtd" style="display:none">
+    <div class="filterbar">
+      <div class="fgroup"><label>Bulan</label><select id="fMonth" onchange="renderMTD()"></select></div>
+      <div class="fgroup"><label>Tahun</label><select id="fYearMTD" onchange="renderMTD()"></select></div>
+      <div class="fgroup"><label>Cari Hotel</label><select id="fHotelMTD" onchange="renderMTD()"><option value="">Semua Hotel</option></select></div>
+      <div class="finfo" id="mtdInfo"></div>
+    </div>
+    <div class="kpis" id="kpiMTD"></div>
+    <div class="insight"><h4>💡 Insight Edukatif — MTD</h4><ul id="insightMTD"></ul></div>
+    <div class="grid">
+      <div class="card c12"><h3>📋 Laporan Lengkap MTD</h3><div class="sub">Akumulasi bulan berjalan: indeks kompetitif menunjukkan siapa yang merebut pasar</div>
+        <div class="tscroll"><table id="tblMTD"></table></div>
+        <span class="legend-chip">🟢 RGI ≥ 1.00 = mengambil porsi pasar sesuai/lebih dari potensi</span>
+        <span class="legend-chip">🔴 Fair Share negatif = kehilangan porsi pasar</span>
+      </div>
+      <div class="card c12"><h3>📈 Tren Harian: Revenue & Okupansi</h3><div class="sub">Batang = total revenue harian · Garis = okupansi tertimbang — amati korelasi harga vs keterisian</div><div class="chartbox tall"><canvas id="chTrendMTD"></canvas></div></div>
+      <div class="card c6"><h3>🏨 Akumulasi Revenue per Hotel (MTD)</h3><div class="sub">Bandingkan kontribusi antar hotel dalam bulan berjalan</div><div class="chartbox"><canvas id="chHotelMTD"></canvas></div></div>
+      <div class="card c6"><h3>🍩 Komposisi Revenue Bulan Ini</h3><div class="sub">Porsi masing-masing hotel terhadap total</div><div class="chartbox"><canvas id="chDonutMTD"></canvas></div></div>
+      <div class="card c4"><h3>📊 Okupansi per Hotel vs Benchmark</h3><div class="sub">Siapa yang konsisten di atas 70%?</div><div class="chartbox short"><canvas id="chOccMTD"></canvas></div></div>
+      <div class="card c4"><h3>⚖️ ARR vs RevPAR per Hotel</h3><div class="sub">Strategi harga vs hasil nyata</div><div class="chartbox short"><canvas id="chArrRevMTD"></canvas></div></div>
+      <div class="card c4"><h3>🏆 Skor Kompetitif RGI (MTD)</h3><div class="sub">Peringkat performa terhadap rata-rata bulan berjalan</div><div class="chartbox short"><canvas id="chRgiMTD"></canvas></div></div>
+      <div class="card c12"><h3>📈 Proyeksi Akhir Bulan</h3><div class="sub">Run-rate MTD × sisa hari bulan → estimasi revenue & okupansi akhir bulan</div>
+        <div class="tscroll"><table id="tblFcMTD"></table></div></div>
+    </div>
+  </section>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white"><i class="fas fa-chart-pie text-sky-400 mr-2"></i>Market Revenue Share</h3>
-                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Proporsi penguasaan kue pendapatan pasar.</p>
-                    </div>
-                    <div class="flex-grow relative h-64 w-full">
-                        <canvas id="revShareChart"></canvas>
-                    </div>
-                </div>
+  <!-- ============ TAB YTD ============ -->
+  <section id="tab-ytd" style="display:none">
+    <div class="filterbar">
+      <div class="fgroup"><label>Tahun</label><select id="fYearYTD" onchange="renderYTD()"></select></div>
+      <div class="fgroup"><label>Cari Hotel</label><select id="fHotelYTD" onchange="renderYTD()"><option value="">Semua Hotel</option></select></div>
+      <div class="finfo" id="ytdInfo"></div>
+    </div>
+    <div class="kpis" id="kpiYTD"></div>
+    <div class="insight"><h4>💡 Insight Edukatif — YTD</h4><ul id="insightYTD"></ul></div>
+    <div class="grid">
+      <div class="card c12"><h3>📋 Laporan Lengkap YTD</h3><div class="sub">Akumulasi tahun berjalan: struktur pasar, indeks kompetitif & dominasi kompetitor</div>
+        <div class="tscroll"><table id="tblYTD"></table></div>
+        <span class="legend-chip">🟢 RGI ≥ 1.00 = mengambil porsi pasar sesuai/lebih dari potensi</span>
+        <span class="legend-chip">🔴 Fair Share negatif = kehilangan porsi pasar</span>
+      </div>
+      <div class="card c8"><h3>📊 Revenue Bulanan & Kumulatif (Run-Rate)</h3><div class="sub">Batang = revenue per bulan · Garis emas = akumulasi YTD</div><div class="chartbox"><canvas id="chMonthlyYTD"></canvas></div></div>
+      <div class="card c4"><h3>📈 Okupansi Bulanan</h3><div class="sub">Pola musiman naik/turun terlihat jelas di sini</div><div class="chartbox"><canvas id="chOccYTD"></canvas></div></div>
+      <div class="card c6"><h3>🗺️ Peta Kompetensi: Occp vs RevPAR</h3><div class="sub">Ukuran gelembung = total revenue · Kanan-atas = juara pasar</div><div class="chartbox tall"><canvas id="chBubbleYTD"></canvas></div></div>
+      <div class="card c6"><h3>🏆 Total Revenue Tahunan per Hotel</h3><div class="sub">Peringkat kontributor terbesar dalam setahun</div><div class="chartbox tall"><canvas id="chHotelYTD"></canvas></div></div>
+      <div class="card c6"><h3>⚖️ ARR vs RevPAR Tahunan</h3><div class="sub">Posisi harga vs realisasi hasil per kamar</div><div class="chartbox"><canvas id="chArrRevYTD"></canvas></div></div>
+      <div class="card c6"><h3>📉 Musiman: Revenue Index per Bulan</h3><div class="sub">Index rata-rata tahun = 100 · &gt;100 = di atas rata-rata</div><div class="chartbox"><canvas id="chSeasonYTD"></canvas></div></div>
+      <div class="card c12"><h3>📈 Proyeksi Akhir Tahun</h3><div class="sub">Run-rate YTD × sisa hari tahun → estimasi penutup tahun (budget review)</div>
+        <div class="tscroll"><table id="tblFcYTD"></table></div></div>
+    </div>
+  </section>
 
-                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white"><i class="fas fa-bed text-sky-400 mr-2"></i>Tingkat Hunian (%)</h3>
-                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Siapa yang paling banyak menjual kapasitas ruangnya.</p>
-                    </div>
-                    <div class="flex-grow relative h-64 w-full">
-                        <canvas id="occpChart"></canvas>
-                    </div>
-                </div>
+  <div class="foot">
+    <div class="defs">
+      <div class="def"><b>Occp (Okupansi)</b> = Room Sold ÷ Available Room × 100%. Ukuran seberapa penuh hotel.</div>
+      <div class="def"><b>ARR / ADR</b> = Room Revenue ÷ Room Sold. Rata-rata harga jual per kamar terisi.</div>
+      <div class="def"><b>RevPAR</b> = Room Revenue ÷ Available Room = Occp × ARR. Standar emas performa hotel.</div>
+      <div class="def"><b>RGI</b> = RevPAR hotel ÷ RevPAR pasar. ≥1.00 artinya performa setara/di atas rata-rata kompetitor.</div>
+    </div>
+    <p style="margin-top:14px">Dashboard membaca <b>Sheet "Input Harian"</b> dari Google Spreadsheet Anda setiap <b>5 menit</b> (otomatis) dan saat tombol Sync ditekan.<br>
+    Cukup update data di spreadsheet — dashboard akan ikut berubah tanpa perlu refresh manual.</p>
+  </div>
+</div>
 
-                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white"><i class="fas fa-balance-scale text-sky-400 mr-2"></i>Share Gap (Actual vs Fair)</h3>
-                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Jika batang Actual melampaui Fair, penetrasi pasar sukses.</p>
-                    </div>
-                    <div class="flex-grow relative h-64 w-full">
-                        <canvas id="shareChart"></canvas>
-                    </div>
-                </div>
+<script>
+/* ================= CONFIG ================= */
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU/export?format=csv&gid=1609483300";
+const AUTO_SYNC_MS = 5 * 60 * 1000; // 5 menit
+const PROXIES = [
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+  u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u),
+  u => "https://r.jina.ai/" + u
+];
 
-                <div class="card-panel rounded-2xl shadow-lg border p-6 lg:col-span-2 flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white"><i class="fas fa-tags text-sky-400 mr-2"></i>Analisa Harga (ARR vs RevPAR)</h3>
-                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Gap yang terlalu jauh antara ARR (Harga Jual) dan RevPAR menunjukkan banyak kamar kosong (Loss Potential).</p>
-                    </div>
-                    <div class="flex-grow relative h-64 w-full">
-                        <canvas id="arrRevParChart"></canvas>
-                    </div>
-                </div>
+/* Snapshot data (fallback offline) — sinkron terakhir: 2026-09-27 */
+const EMBED_CSV = `INPUT DATA HARIAN - PERFORMANCE HOTEL,,,,,,,
+,,,,,,,
+Tanggal,Hotel,Available,Room Sold,Room Revenue,Occp (%),ARR,Rev Par
+2026-07-01,Oak Tree Emerald,172,172,24324802,34.88,405.413,141.423
+2026-07-01,Grand Edge,118,118,35852660,72.03,421.796,303.836
+2026-07-01,Grand Candi,198,198,69027905,42.93,812.093,348.626
+2026-07-01,Patra Jasa,146,146,18159916,19.86,626.204,124.383
+2026-07-01,Noormans,114,114,34697978,85.96,354.061,304.368
+2026-07-01,Wimarion,62,62,15921165,62.90,408.235,256.793
+2026-07-01,Ciputra,199,199,117745320,77.39,764.580,591.685
+2026-07-01,Aruss,147,147,94458979,94.56,679.561,642.578
+2026-07-01,Padma,224,224,389841912,94.20,1.847.592,1.740.366
+2026-07-02,Oak Tree Emerald,172,172,53008318,69.19,445.448,308.188
+2026-07-02,Grand Edge,118,118,46844580,89.83,441.930,396.988
+2026-07-02,Grand Candi,198,198,129777724,91.41,717.004,655.443
+2026-07-02,Patra Jasa,146,146,60085767,59.59,690.641,411.546
+2026-07-02,Noormans,114,114,35599900,87.72,355.999,312.280
+2026-07-02,Wimarion,62,62,23062806,75.81,490.698,371.981
+2026-07-02,Ciputra,199,199,146950496,92.46,798.644,738.445
+2026-07-02,Aruss,147,147,118110185,98.64,814.553,803.471
+2026-07-02,Padma,224,224,455291550,93.75,2.168.055,2.032.552
+2026-07-04,Oak Tree Emerald,172,172,79647422,91.28,507.308,463.066
+2026-07-04,Grand Edge,118,118,56768974,100.00,481.093,481.093
+2026-07-04,Grand Candi,198,198,127659426,93.94,686.341,644.745
+2026-07-04,Patra Jasa,146,146,100594010,75.34,914.491,689.000
+2026-07-04,Noormans,114,114,45920560,98.25,410.005,402.812
+2026-07-04,Wimarion,62,62,31205034,100.00,503.307,503.307
+2026-07-04,Ciputra,199,199,156719040,96.48,816.245,787.533
+2026-07-04,Aruss,147,147,125262816,100.00,852.128,852.128
+2026-07-04,Padma,224,224,531401904,96.43,2.460.194,2.372.330
+2026-07-05,Oak Tree Emerald,172,172,53433257,89.53,346.969,310.658
+2026-07-05,Grand Edge,118,118,59827416,100.00,507.012,507.012
+2026-07-05,Grand Candi,198,198,65662404,48.99,676.932,331.628
+2026-07-05,Patra Jasa,146,146,49692192,45.21,752.912,340.357
+2026-07-05,Noormans,114,114,37378250,79.82,410.750,327.879
+2026-07-05,Wimarion,62,62,29522304,90.32,527.184,476.166
+2026-07-05,Ciputra,199,199,122302290,82.91,741.226,614.584
+2026-07-05,Aruss,147,147,108698814,93.20,793.422,739.448
+2026-07-05,Padma,224,224,481287102,97.32,2.207.739,2.148.603
+2026-07-06,Oak Tree Emerald,172,172,19263328,26.74,418.768,111.996
+2026-07-06,Grand Edge,118,118,62241932,100.00,527.474,527.474
+2026-07-06,Grand Candi,198,198,119138940,90.91,661.883,601.712
+2026-07-06,Patra Jasa,146,146,52555368,52.05,691.518,359.968
+2026-07-06,Noormans,114,114,36967500,78.95,410.750,324.276
+2026-07-06,Wimarion,62,62,22504181,79.03,459.269,362.971
+2026-07-06,Ciputra,199,199,146816879,93.97,785.117,737.773
+2026-07-06,Aruss,147,147,114058087,97.28,797.609,775.905
+2026-07-06,Padma,224,224,445976664,96.88,2.055.192,1.990.967
+2026-07-07,Oak Tree Emerald,172,172,31716237,42.44,434.469,184.397
+2026-07-07,Grand Edge,118,118,55158392,100.00,467.444,467.444
+2026-07-07,Grand Candi,198,198,129130793,94.44,690.539,652.176
+2026-07-07,Patra Jasa,146,146,56977998,52.74,739.974,390.260
+2026-07-07,Noormans,114,114,35251821,86.84,356.079,309.227
+2026-07-07,Wimarion,62,62,27139528,95.16,459.992,437.734
+2026-07-07,Ciputra,199,199,142485772,93.97,761.956,716.009
+2026-07-07,Aruss,147,147,117137735,97.28,819.145,796.855
+2026-07-07,Padma,224,224,447219370,97.32,2.051.465,1.996.515
+2026-07-10,Oak Tree Emerald,172,172,40719968,50.00,473.488,236.744
+2026-07-10,Grand Edge,118,118,50291074,92.37,461.386,426.196
+2026-07-10,Grand Candi,198,198,94003235,69.19,686.155,474.764
+2026-07-10,Patra Jasa,146,146,56665980,47.95,809.514,388.123
+2026-07-10,Noormans,114,114,25699124,72.81,309.628,225.431
+2026-07-10,Wimarion,62,62,27981250,88.71,508.750,451.310
+2026-07-10,Ciputra,199,199,149172924,94.47,793.473,749.613
+2026-07-10,Aruss,147,147,126514385,98.64,872.513,860.642
+2026-07-10,Padma,224,224,530033864,97.32,2.431.348,2.366.223
+2026-07-11,Oak Tree Emerald,172,172,48669767,59.88,472.522,282.964
+2026-07-11,Grand Edge,118,118,54915054,96.61,481.711,465.382
+2026-07-11,Grand Candi,198,198,77007105,58.08,669.627,388.925
+2026-07-11,Patra Jasa,146,146,50163642,42.47,809.091,343.587
+2026-07-11,Noormans,114,114,30390720,84.21,316.570,266.585
+2026-07-11,Wimarion,62,62,26076180,83.87,501.465,420.584
+2026-07-11,Ciputra,199,199,150369345,94.97,795.605,755.625
+2026-07-11,Aruss,147,147,119811980,93.20,874.540,815.047
+2026-07-11,Padma,224,224,536169510,95.54,2.505.465,2.393.614
+2026-07-13,Oak Tree Emerald,172,172,7492080,11.05,394.320,43.559
+2026-07-13,Grand Edge,118,118,32036355,58.47,464.295,271.495
+2026-07-13,Grand Candi,198,198,58506282,43.94,672.486,295.486
+2026-07-13,Patra Jasa,146,146,38444398,36.30,725.366,263.318
+2026-07-13,Noormans,114,114,27439352,82.46,291.908,240.696
+2026-07-13,Wimarion,62,62,8853447,27.42,520.791,142.798
+2026-07-13,Ciputra,199,199,81877738,61.31,671.129,411.446
+2026-07-13,Aruss,147,147,110913644,96.60,781.082,754.515
+2026-07-13,Padma,224,224,284031384,75.00,1.690.663,1.267.997
+2026-07-14,Oak Tree Emerald,172,172,8138636,12.79,369.938,47.318
+2026-07-14,Grand Edge,118,118,24383709,53.39,387.043,206.642
+2026-07-14,Grand Candi,198,198,59775070,44.95,671.630,301.894
+2026-07-14,Patra Jasa,146,146,41368888,46.58,608.366,283.349
+2026-07-14,Noormans,114,114,21352924,54.39,344.402,187.306
+2026-07-14,Wimarion,62,62,13995700,40.32,559.828,225.737
+2026-07-14,Ciputra,199,199,100775850,75.38,671.839,506.411
+2026-07-14,Aruss,147,147,102141555,87.76,791.795,694.841
+2026-07-14,Padma,224,224,262372275,73.66,1.590.135,1.171.305
+22/07/2026,Oak Tree Emerald,172,172,18.209.965,"100,00",105.872,105.872
+22/07/2026,Grand Edge,118,118,29.120.579,"100,00",246.785,246.785
+22/07/2026,Grand Candi,198,198,60.169.824,"100,00",303.888,303.888
+22/07/2026,Patra Jasa,146,146,55.480.776,"100,00",380.005,380.005
+22/07/2026,Noormans,114,114,29.156.667,"100,00",255.760,255.760
+22/07/2026,Wimarion,62,62,26.110.674,"100,00",421.140,421.140
+22/07/2026,Ciputra,199,199,140.222.168,"100,00",704.634,704.634
+22/07/2026,Aruss,147,147,110.289.456,"100,00",750.268,750.268
+22/07/2026,Padma,224,224,355.722.180,"100,00",1.588.045,1.588.045`;
 
-                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white"><i class="fas fa-trophy text-amber-400 mr-2"></i>Performance Index (vs Market)</h3>
-                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Index > 1.00 berarti mengalahkan rata-rata kompetitor (Set 1).</p>
-                    </div>
-                    <div class="flex-grow relative h-64 w-full">
-                        <canvas id="indexChart"></canvas>
-                    </div>
-                </div>
-            </div>
+/* ================= STATE ================= */
+let ROWS = [];
+let charts = {};
+let currentTab = 'today';
+const COLORS = ['#818cf8','#38bdf8','#34d399','#fbbf24','#f87171','#a78bfa','#f472b6','#2dd4bf','#fb923c'];
+const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
-            <div class="card-panel rounded-2xl shadow-lg border mb-8 overflow-hidden">
-                <div class="p-5 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-bold text-white"><i class="fas fa-table text-sky-400 mr-2"></i>Comprehensive Competitor Matrix</h3>
-                        <p class="text-xs text-slate-400 mt-1">Data dikalkulasi dan dikategorikan secara dinamis berdasarkan filter.</p>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full report-table" id="full-report-table">
-                        <thead>
-                            <tr>
-                                <th class="w-48 text-left">HOTEL NAME</th>
-                                <th>AVAILABLE</th>
-                                <th>ROOM SOLD</th>
-                                <th>OCCP. (%)</th>
-                                <th>ARR (Rp)</th>
-                                <th>REV PAR (Rp)</th>
-                                <th>ROOM REVENUE (Rp)</th>
-                                <th>NAT. SHARE (%)</th>
-                                <th>ACT. SHARE (%)</th>
-                                <th>FAIR SHARE</th>
-                                <th>M.P.I</th>
-                                <th>A.R.I</th>
-                                <th class="col-rgi text-sky-300">R.G.I</th>
-                                <th>Rank RGI</th>
-                                <th>Rank Occ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-        </div>
-    </main>
+/* ================= PARSING ================= */
+function parseCSV(text){
+  const m = text.match(/```[\s\S]*?```/);
+  if(m) text = m[0].replace(/```/g,'');
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  const start = lines.findIndex(l=>/^tanggal/i.test(l));
+  const dataLines = start>=0 ? lines.slice(start+1) : lines;
+  const rows=[]; let cur='';
+  for(const line of dataLines){
+    cur = cur ? cur + '\n' + line : line;
+    if((cur.match(/"/g)||[]).length % 2 === 0){ rows.push(cur); cur=''; }
+  }
+  if(cur) rows.push(cur);
+  return rows.map(line=>{
+    const cells=[]; let c='', q=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){ if(q && line[i+1]==='"'){c+='"';i++;} else q=!q; }
+      else if(ch===',' && !q){ cells.push(c); c=''; }
+      else c+=ch;
+    }
+    cells.push(c);
+    return cells.map(s=>s.trim());
+  });
+}
 
-    <script>
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = '#334155';
-        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+function normNum(s){
+  if(s==null) return null;
+  s = String(s).trim().replace(/\s/g,'');
+  if(s==='' || /^-+$/.test(s)) return null;
+  let neg = s.startsWith('(') && s.endsWith(')');
+  s = s.replace(/[()Rp\s]/gi,'');
+  if(/^-?[\d.]+,\d{1,4}$/.test(s) && s.includes('.'))      s = s.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(,\d{3})+$/.test(s))                   s = s.replace(/,/g,'');
+  else if(/^-?\d+,\d{1,4}$/.test(s))                        s = s.replace(',','.');
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(s))                  s = s.replace(/\./g,'');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : (neg ? -n : n);
+}
 
-        const SHEET_ID = '149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU';
-        const SHEET_NAME = 'Input Harian';
-        let rawData = [];
-        let currentTab = 'harian';
+function parseDateVal(s){
+  if(s==null) return null;
+  s = String(s).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){ let y=+m[3]; if(y<100) y+=2000; return new Date(y, +m[2]-1, +m[1]); }
+  const n = parseFloat(s);
+  if(!isNaN(n) && n>20000 && n<80000){ return new Date(Math.round((n - 25569) * 86400 * 1000)); }
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
 
-        const SET_1 = ['Oak Tree Emerald', 'Grand Edge', 'Grand Candi', 'Patra Jasa', 'Noormans', 'Wimarion'];
-        const SET_2 = ['Oak Tree Emerald', 'Ciputra', 'Aruss', 'Padma'];
+function buildRows(csvText){
+  const out=[];
+  for(const c of parseCSV(csvText)){
+    const d = parseDateVal(c[0]);
+    if(!d || !c[1]) continue;
+    const y=d.getFullYear(), mo=d.getMonth(), da=d.getDate();
+    out.push({
+      date: new Date(y,mo,da),
+      dateISO: `${y}-${String(mo+1).padStart(2,'0')}-${String(da).padStart(2,'0')}`,
+      year:y, month:mo, hotel:c[1],
+      available: normNum(c[2]) ?? 0,
+      roomSold: normNum(c[3]) ?? 0,
+      revenue: normNum(c[4]) ?? 0,
+      occp: normNum(c[5]) ?? 0,
+      arr: normNum(c[6]) ?? 0,
+      revpar: normNum(c[7]) ?? 0
+    });
+  }
+  out.sort((a,b)=>a.date-b.date);
+  return out;
+}
 
-        let occpChart = null, revShareChart = null, arrRevParChart = null, shareChart = null, indexChart = null;
+/* ================= FETCH & SYNC ================= */
+async function loadData(manual){
+  const dot=document.getElementById('syncDot'), txt=document.getElementById('syncText'),
+        sub=document.getElementById('syncSub'), btn=document.getElementById('btnSync');
+  btn.disabled = true;
+  dot.className='dot'; txt.textContent = 'Menyinkronkan…';
+  let ok=false;
+  for(const prox of PROXIES){
+    try{
+      const ctrl = new AbortController();
+      const to = setTimeout(()=>ctrl.abort(), 20000);
+      const res = await fetch(prox(SHEET_CSV_URL), {signal:ctrl.signal});
+      clearTimeout(to);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const text = await res.text();
+      const rows = buildRows(text);
+      if(rows.length < 5) throw new Error('Data tidak valid');
+      ROWS = rows; ok=true; break;
+    }catch(e){}
+  }
+  if(!ok){
+    ROWS = buildRows(EMBED_CSV);
+    dot.className='dot err';
+    txt.textContent = 'Offline — data snapshot';
+    sub.textContent = 'Live sync diblokir jaringan/proxy · tekan Sync untuk coba lagi';
+  } else {
+    dot.className='dot ok';
+    const now = new Date();
+    txt.textContent = 'Tersinkron ' + now.toLocaleTimeString('id-ID');
+    sub.textContent = (manual?'Sinkronisasi manual · ':'Auto-sync 5 menit · ') + ROWS.length.toLocaleString('id-ID') + ' baris data';
+  }
+  buildFilters();
+  renderAll();
+  btn.disabled = false;
+}
+setInterval(()=>loadData(false), AUTO_SYNC_MS);
 
-        async function fetchData() {
-            document.getElementById('loading').style.display = 'flex';
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
-            
-            try {
-                const response = await fetch(url);
-                const csvText = await response.text();
-                
-                Papa.parse(csvText, {
-                    complete: function(results) {
-                        processRawData(results.data);
-                        document.getElementById('loading').style.display = 'none';
-                    }
-                });
-            } catch (error) {
-                alert("Gagal menarik data dari Google Sheets. Pastikan akses link terbuka.");
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
+/* ================= HELPERS ================= */
+const fmtIDR = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const fmtNum = n => Math.round(n).toLocaleString('id-ID');
+const fmtPct = n => n.toFixed(2).replace('.',',') + '%';
+const fmtPct1 = n => n.toFixed(1).replace('.',',') + '%';
+const fmt2 = n => n.toFixed(2).replace('.',',');
 
-        // Fungsi normalisasi tanggal agar kompatibel dengan berbagai format input browser
-        function normalizeDate(rawDateStr) {
-            if (!rawDateStr) return '';
-            let cleanStr = rawDateStr.trim();
-            // Jika format spreadsheet sudah YYYY-MM-DD
-            if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
-                return cleanStr;
-            }
-            // Coba parsing ke object Date untuk mengantisipasi format lain
-            let d = new Date(cleanStr);
-            if (!isNaN(d.getTime())) {
-                let year = d.getFullYear();
-                let month = String(d.getMonth() + 1).padStart(2, '0');
-                let day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-            return cleanStr;
-        }
+function agg(rows){
+  if(!rows.length) return null;
+  const rev = rows.reduce((s,r)=>s+r.revenue,0);
+  const avail = rows.reduce((s,r)=>s+r.available,0);
+  const occRooms = rows.reduce((s,r)=>s + r.available * r.occp/100, 0);
+  const occp = avail ? occRooms/avail*100 : 0;
+  const arr = occRooms ? rev/occRooms : 0;
+  const revpar = avail ? rev/avail : 0;
+  return { rev, avail, occp, arr, revpar, n:rows.length };
+}
 
-        function processRawData(data) {
-            let headerIdx = -1;
-            for (let i = 0; i < data.length; i++) {
-                if (data[i][0] === 'Tanggal') { headerIdx = i; break; }
-            }
-            if (headerIdx === -1) return;
+function groupBy(rows, key){
+  const m = new Map();
+  rows.forEach(r=>{ const k=key(r); if(!m.has(k)) m.set(k,[]); m.get(k).push(r); });
+  return m;
+}
 
-            const processed = [];
-            for (let i = headerIdx + 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row[0] || row[0].trim() === '') continue; 
-                if (isNaN(parseFloat(row[2]))) continue; 
+function destroyCharts(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function mkChart(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  Chart.defaults.color = '#8ea3c8';
+  Chart.defaults.borderColor = 'rgba(142,163,200,.12)';
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+const tooltipDark = { backgroundColor:'#0f1b3d', borderColor:'#2b3d6e', borderWidth:1, titleColor:'#f5c451', bodyColor:'#dbe4f7', padding:10, cornerRadius:10 };
 
-                let normalized = normalizeDate(row[0]);
+function kpiCard(label, value, sub, color, tipText, delta){
+  return `<div class="kpi" style="--ac:${color}">
+    <div class="lbl">${label} ${tipText?`<span class="tip" title="${tipText}">?</span>`:''}</div>
+    <div class="val">${value}</div>
+    <div class="sub">${sub}</div>
+    ${delta!==undefined && delta!==null ? `<span class="delta ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${fmtPct1(Math.abs(delta))}</span>` : ''}
+  </div>`;
+}
 
-                processed.push({
-                    tanggal: normalized, // Selalu format YYYY-MM-DD standar
-                    hotel: row[1].trim(),
-                    available: parseFloat(row[2]) || 0,
-                    roomSold: parseFloat(row[3]) || 0,
-                    revenue: parseFloat(row[4].replace(/,/g, '')) || 0,
-                });
-            }
-            rawData = processed;
-            setupFilters();
-        }
+function pillOccp(o){
+  const cls = o>=70?'hi':(o>=50?'mid':'lo');
+  return `<span class="pill ${cls}">${fmtPct1(o)}</span>`;
+}
+function pillIdx(v){
+  const cls = v>=1?'hi':(v>=0.85?'mid':'lo');
+  return `<span class="pill ${cls}">${fmt2(v)}</span>`;
+}
+function rankBadge(r){
+  const cls = r===1?'top1':(r===2?'top2':(r===3?'top3':''));
+  return `<span class="rankbadge ${cls}">${r}</span>`;
+}
 
-        function setupFilters() {
-            if (rawData.length === 0) return;
+/* ---------- TITOR REPORT BUILDER ---------- */
+function reportData(rows){
+  const byHotel = [...groupBy(rows, r=>r.hotel).entries()].map(([h,rs])=>({h, ...agg(rs)}));
+  const city = agg(rows);
+  byHotel.forEach(d=>{
+    d.natShare  = city.avail ? d.avail/city.avail*100 : 0;
+    d.actShare  = city.avail ? (d.avail*d.occp/100)/(city.avail*city.occp/100)*100 : 0;
+    d.fairShare = d.actShare - d.natShare;
+    d.mpi  = city.occp  ? d.occp/city.occp  : 0;
+    d.ari  = city.arr   ? d.arr/city.arr    : 0;
+    d.rgi  = city.revpar? d.revpar/city.revpar : 0;
+  });
+  const rankRgi = [...byHotel].sort((a,b)=>b.rgi-a.rgi);
+  const rankOcc = [...byHotel].sort((a,b)=>b.occp-a.occp);
+  byHotel.forEach(d=>{
+    d.rankRgi = rankRgi.indexOf(d)+1;
+    d.rankOcc = rankOcc.indexOf(d)+1;
+  });
+  byHotel.sort((a,b)=>b.rev-a.rev);
+  return { byHotel, city };
+}
 
-            const uniqueDates = [...new Set(rawData.map(d => d.tanggal))].sort();
-            const oldestDate = uniqueDates[0];
-            const latestDate = uniqueDates[uniqueDates.length - 1];
+function reportTable(rows){
+  const { byHotel, city } = reportData(rows);
+  let html = `<tr><th>#</th><th>Hotel Name</th><th class="num">Available</th><th class="num">Occp</th><th class="num">ARR</th><th class="num">RevPAR</th><th class="num">Room Revenue</th><th class="num">Natural Share</th><th class="num">Actual Share</th><th class="num">Fair Share</th><th class="num">M.P.I</th><th class="num">A.R.I</th><th class="num">R.G.I</th><th class="ctr">Rank RGI</th><th class="ctr">Rank Occ</th></tr>`;
+  byHotel.forEach((d,i)=>{
+    html += `<tr>
+      <td>${i+1}</td><td><b>${d.h}</b></td>
+      <td class="num">${fmtNum(d.avail)}</td><td class="num">${pillOccp(d.occp)}</td>
+      <td class="num">${fmtNum(d.arr)}</td><td class="num">${fmtNum(d.revpar)}</td>
+      <td class="num"><b>${fmtNum(d.rev)}</b></td>
+      <td class="num">${fmtPct1(d.natShare)}</td><td class="num">${fmtPct1(d.actShare)}</td>
+      <td class="num" style="color:${d.fairShare>=0?'#6ee7b7':'#fca5a5'};font-weight:700">${d.fairShare>=0?'+':''}${fmtPct1(d.fairShare)}</td>
+      <td class="num">${pillIdx(d.mpi)}</td><td class="num">${pillIdx(d.ari)}</td><td class="num">${pillIdx(d.rgi)}</td>
+      <td class="ctr">${rankBadge(d.rankRgi)}</td><td class="ctr">${rankBadge(d.rankOcc)}</td></tr>`;
+  });
+  html += `<tr class="cityrow"><td></td><td>CITY RESULT (PORTOFOLIO)</td><td class="num">${fmtNum(city.avail)}</td><td class="num">${fmtPct1(city.occp)}</td><td class="num">${fmtNum(city.arr)}</td><td class="num">${fmtNum(city.revpar)}</td><td class="num">${fmtNum(city.rev)}</td><td class="num">100%</td><td class="num">100%</td><td class="num">0.00%</td><td class="num">1.00</td><td class="num">1.00</td><td class="num">1.00</td><td class="ctr">—</td><td class="ctr">—</td></tr>`;
+  const avg = { occp: byHotel.reduce((s,d)=>s+d.occp,0)/byHotel.length, arr: byHotel.reduce((s,d)=>s+d.arr,0)/byHotel.length, revpar: byHotel.reduce((s,d)=>s+d.revpar,0)/byHotel.length };
+  html += `<tr class="avgrow"><td></td><td>AVERAGE SEDERHANA</td><td class="num">${fmtNum(city.avail/byHotel.length)}</td><td class="num">${fmtPct1(avg.occp)}</td><td class="num">${fmtNum(avg.arr)}</td><td class="num">${fmtNum(avg.revpar)}</td><td class="num">${fmtNum(city.rev/byHotel.length)}</td><td class="num" colspan="7">Rata-rata aritmetika antar hotel (bukan tertimbang)</td></tr>`;
+  return html;
+}
 
-            const harianInput = document.getElementById('filter-harian');
-            harianInput.min = oldestDate;
-            harianInput.max = latestDate;
-            harianInput.value = latestDate; // Set default ke tanggal paling baru
+/* ---------- FORECAST TABLE ---------- */
+function forecastTable(rows, periodLabel, totalDays, elapsedDays){
+  const a = agg(rows);
+  if(!a || !elapsedDays) return '<tr><td>Tidak ada data untuk periode ini</td></tr>';
+  const dailyRev = a.rev / elapsedDays;
+  const projRev = a.rev + dailyRev * (totalDays - elapsedDays);
+  const projOcc = a.occp;
+  const byHotel = [...groupBy(rows, r=>r.hotel).entries()].map(([h,rs])=>({h, ...agg(rs)})).sort((x,y)=>y.rev-x.rev);
+  let html = `<tr><th>#</th><th>Hotel</th><th class="num">Hari Terdata</th><th class="num">Revenue Realisasi</th><th class="num">Rata-rata / Hari</th><th class="num">Proyeksi Sisa Periode (${totalDays-elapsedDays} hari)</th><th class="num">ESTIMASI TOTAL ${periodLabel}</th><th class="num">Okupansi Proyeksi</th></tr>`;
+  byHotel.forEach((d,i)=>{
+    const dr = d.rev/elapsedDays, pr = d.rev + dr*(totalDays-elapsedDays);
+    html += `<tr><td>${i+1}</td><td><b>${d.h}</b></td><td class="num">${elapsedDays}</td><td class="num">${fmtIDR(d.rev)}</td><td class="num">${fmtIDR(dr)}</td><td class="num">${fmtIDR(dr*(totalDays-elapsedDays))}</td><td class="num" style="color:#f5c451;font-weight:800">${fmtIDR(pr)}</td><td class="num">${pillOccp(d.occp)}</td></tr>`;
+  });
+  html += `<tr class="cityrow"><td></td><td>TOTAL PROYEKSI</td><td class="num">${elapsedDays}</td><td class="num">${fmtIDR(a.rev)}</td><td class="num">${fmtIDR(dailyRev)}</td><td class="num">${fmtIDR(dailyRev*(totalDays-elapsedDays))}</td><td class="num">${fmtIDR(projRev)}</td><td class="num">${fmtPct1(projOcc)}</td></tr>`;
+  return html;
+}
 
-            const uniqueMonths = [...new Set(rawData.map(d => d.tanggal.substring(0, 7)))].sort();
-            const latestMonth = uniqueMonths[uniqueMonths.length - 1];
-            const oldestMonth = uniqueMonths[0];
-            
-            const mtdInput = document.getElementById('filter-mtd');
-            mtdInput.min = oldestMonth;
-            mtdInput.max = latestMonth;
-            mtdInput.value = latestMonth;
+/* ================= FILTERS ================= */
+function buildFilters(){
+  const dates = [...new Set(ROWS.map(r=>r.dateISO))].sort().reverse();
+  const months = [...new Set(ROWS.map(r=>r.year+'-'+r.month))].sort().reverse();
+  const years  = [...new Set(ROWS.map(r=>r.year))].sort().reverse();
+  const hotels = [...new Set(ROWS.map(r=>r.hotel))].sort();
+  const opt = (arr,f)=>arr.map(v=>`<option value="${v}">${f(v)}</option>`).join('');
+  document.getElementById('fDate').innerHTML = opt(dates, v=>new Date(v+'T00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+  document.getElementById('fMonth').innerHTML = months.map(v=>{ const [y,m]=v.split('-'); return `<option value="${v}">${MONTHS_ID[+m]} ${y}</option>`; }).join('');
+  document.getElementById('fYearMTD').innerHTML = opt(years, v=>v);
+  document.getElementById('fYearYTD').innerHTML = opt(years, v=>v);
+  ['fHotelToday','fHotelMTD','fHotelYTD'].forEach(id=>{
+    const sel=document.getElementById(id), cur=sel.value;
+    sel.innerHTML = '<option value="">Semua Hotel</option>' + opt(hotels, v=>v);
+    sel.value = cur;
+  });
+}
 
-            const uniqueYears = [...new Set(rawData.map(d => d.tanggal.substring(0, 4)))].sort().reverse();
-            const ytdSelect = document.getElementById('filter-ytd');
-            ytdSelect.innerHTML = '';
-            uniqueYears.forEach(y => {
-                const opt = document.createElement('option');
-                opt.value = y; opt.textContent = y;
-                ytdSelect.appendChild(opt);
-            });
-            if (uniqueYears.length > 0) ytdSelect.value = uniqueYears[0];
+/* ================= CHART GROUP BUILDERS ================= */
+function chartRev(id, byHotel, unit='jt'){
+  mkChart(id,{type:'bar',data:{labels:byHotel.map(x=>x.h),datasets:[{data:byHotel.map(x=>x.rev),backgroundColor:byHotel.map((_,i)=>COLORS[i%9]),borderRadius:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipDark,callbacks:{label:c=>fmtIDR(c.raw)}}},
+    scales:{y:{ticks:{callback:v=>(v/1e6).toLocaleString('id-ID')+' jt'}},x:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+}
+function chartOccBench(id, byHotel){
+  const bh = byHotel.slice().sort((x,y)=>y.occp-x.occp);
+  mkChart(id,{type:'bar',data:{labels:bh.map(x=>x.h),datasets:[
+      {type:'line',label:'Benchmark 70%',data:bh.map(()=>70),borderColor:'#f87171',borderDash:[6,5],borderWidth:2,pointRadius:0},
+      {label:'Okupansi',data:bh.map(x=>+x.occp.toFixed(2)),backgroundColor:bh.map(x=>x.occp>=70?'rgba(52,211,153,.85)':'rgba(251,191,36,.85)'),borderRadius:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,font:{size:11}},},tooltip:{...tooltipDark,callbacks:{label:c=>c.dataset.label+': '+fmtPct1(c.raw)}}},
+    scales:{y:{max:110,ticks:{callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+}
+function chartDonut(id, byHotel, total){
+  mkChart(id,{type:'doughnut',data:{labels:byHotel.map(x=>x.h),datasets:[{data:byHotel.map(x=>x.rev),backgroundColor:byHotel.map((_,i)=>COLORS[i%9]),borderWidth:2,borderColor:'#111c36'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10.5}}},tooltip:{...tooltipDark,callbacks:{label:c=>c.label+': '+fmtIDR(c.raw)+' ('+fmtPct1(c.raw/total*100)+')'}}}}});
+}
+function chartArrRev(id, byHotel){
+  const bh = byHotel.slice().sort((x,y)=>y.revpar-x.revpar);
+  mkChart(id,{data:{labels:bh.map(x=>x.h),datasets:[
+      {type:'bar',label:'ARR',data:bh.map(x=>x.arr),backgroundColor:'rgba(56,189,248,.7)',borderRadius:7,yAxisID:'y',order:2},
+      {type:'line',label:'RevPAR',data:bh.map(x=>x.revpar),borderColor:'#fbbf24',backgroundColor:'#fbbf24',tension:.3,pointRadius:4,yAxisID:'y',order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,font:{size:11}}},tooltip:{...tooltipDark,callbacks:{label:c=>c.dataset.label+': '+fmtIDR(c.raw)}}},
+    scales:{y:{ticks:{callback:v=>(v/1e3).toLocaleString('id-ID')+' rb'}},x:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+}
+function chartRgi(id, byHotel){
+  const bh = byHotel.slice().sort((x,y)=>y.rgi-x.rgi);
+  mkChart(id,{type:'bar',data:{labels:bh.map(x=>x.h),datasets:[
+      {type:'line',label:'Parity 1.00',data:bh.map(()=>1),borderColor:'#fbbf24',borderDash:[6,5],borderWidth:2,pointRadius:0},
+      {label:'RGI',data:bh.map(x=>+x.rgi.toFixed(3)),backgroundColor:bh.map(x=>x.rgi>=1?'rgba(52,211,153,.85)':'rgba(248,113,113,.85)'),borderRadius:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,font:{size:11}}},tooltip:{...tooltipDark,callbacks:{label:c=>c.dataset.label+': '+fmt2(c.raw)}}},
+    scales:{y:{ticks:{callback:v=>v.toFixed(2)}},x:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+}
 
-            document.getElementById('data-range-info').innerHTML = `<i class="fas fa-info-circle mr-1"></i>Data tersedia: ${oldestDate} s/d ${latestDate}`;
+/* ================= TAB: TODAY ================= */
+function renderToday(){
+  ['chRevToday','chOccToday','chDonutToday','chArrRevToday','chRgiToday'].forEach(destroyCharts);
+  const dISO = document.getElementById('fDate').value;
+  const hsel = document.getElementById('fHotelToday').value;
+  let rows = ROWS.filter(r=>r.dateISO===dISO);
+  if(hsel) rows = rows.filter(r=>r.hotel===hsel);
+  const a = agg(rows);
+  if(!a){ document.getElementById('kpiToday').innerHTML=''; return; }
 
-            updateDashboard();
-        }
+  document.getElementById('todayInfo').innerHTML = `<b>${rows.length}</b> hotel terdata · dipilih dari <b>${[...new Set(ROWS.map(r=>r.dateISO))].length}</b> tanggal tersedia di sheet`;
 
-        function switchTab(tab) {
-            currentTab = tab;
-            ['harian', 'mtd', 'ytd'].forEach(t => {
-                document.getElementById(`tab-${t}`).className = (t === tab) ? 'tab-active pb-3 px-2 text-lg uppercase tracking-wide' : 'tab-inactive pb-3 px-2 text-lg uppercase tracking-wide';
-                document.getElementById(`filter-${t}`).classList.toggle('hidden', t !== tab);
-            });
-            updateDashboard();
-        }
+  document.getElementById('kpiToday').innerHTML =
+    kpiCard('Total Room Revenue', fmtIDR(a.rev), 'Akumulasi semua hotel hari ini', '#818cf8') +
+    kpiCard('Okupansi (Occp)', fmtPct1(a.occp), 'Tertimbang jumlah kamar tersedia', '#34d399', 'Occp = kamar terisi ÷ kamar tersedia') +
+    kpiCard('ARR', fmtIDR(a.arr), 'Harga rata-rata per kamar terjual', '#fbbf24', 'ARR = Revenue ÷ kamar terjual') +
+    kpiCard('RevPAR', fmtIDR(a.revpar), 'Revenue per kamar tersedia', '#f87171', 'RevPAR = Occp × ARR — indikator utama');
 
-        function updateDashboard() {
-            let filteredData = [];
-            if (currentTab === 'harian') {
-                const f = document.getElementById('filter-harian').value; // Mengambil nilai YYYY-MM-DD dari input date browser
-                filteredData = rawData.filter(d => d.tanggal === f);
-            } else if (currentTab === 'mtd') {
-                const f = document.getElementById('filter-mtd').value; // Mengambil nilai YYYY-MM
-                filteredData = rawData.filter(d => d.tanggal.startsWith(f));
-            } else if (currentTab === 'ytd') {
-                const f = document.getElementById('filter-ytd').value; // Mengambil nilai YYYY
-                filteredData = rawData.filter(d => d.tanggal.startsWith(f));
-            }
+  const { byHotel, city } = reportData(rows);
+  const best = byHotel.reduce((x,y)=>y.rgi>x.rgi?y:x), worst = byHotel.reduce((x,y)=>y.rgi<x.rgi?y:x);
+  const loO = byHotel.reduce((x,y)=>y.occp<x.occp?y:x);
+  const losers = byHotel.filter(x=>x.fairShare<0);
+  document.getElementById('insightToday').innerHTML = `
+    <li>🏆 Performa terbaik vs pasar: <b>${best.h}</b> dengan RGI <b>${fmt2(best.rgi)}</b> (RevPAR ${fmtIDR(best.revpar)} vs rata-rata kota ${fmtIDR(city.revpar)}).</li>
+    <li>${losers.length?`⚠️ <b>${losers.length} hotel</b> kehilangan porsi pasar (Fair Share negatif): ${losers.map(x=>'<b>'+x.h+'</b> ('+fmtPct1(x.fairShare)+')').join(', ')}. Fokuskan strategi distribusi ke hotel-hotel ini.`:`✅ Semua hotel mengambil porsi pasar sesuai/lebih dari potensinya (Fair Share ≥ 0).`}</li>
+    <li>🛏️ Okupansi terendah: <b>${loO.h}</b> (${fmtPct1(loO.occp)}). Jika dinaikkan 10 poin, potensi tambahan ≈ <b>${fmtIDR(loO.avail*0.10*loO.arr)}</b>/hari.</li>`;
 
-            if (filteredData.length === 0) {
-                document.getElementById('no-data').classList.remove('hidden');
-                document.getElementById('dashboard-content').classList.add('hidden');
-                return;
-            }
-            
-            document.getElementById('no-data').classList.add('hidden');
-            document.getElementById('dashboard-content').classList.remove('hidden');
+  document.getElementById('tblToday').innerHTML = reportTable(rows);
 
-            const aggMap = {};
-            filteredData.forEach(r => {
-                if (!aggMap[r.hotel]) aggMap[r.hotel] = { hotel: r.hotel, available: 0, roomSold: 0, revenue: 0 };
-                aggMap[r.hotel].available += r.available;
-                aggMap[r.hotel].roomSold += r.roomSold;
-                aggMap[r.hotel].revenue += r.revenue;
-            });
+  const daysInMonth = new Date(dISO.slice(0,4), +dISO.slice(5,7), 0).getDate();
+  document.getElementById('tblFcToday').innerHTML = forecastTable(rows, '30 HARI', 30, 1);
 
-            const dataSet1 = calculateSetData(aggMap, SET_1);
-            const dataSet2 = calculateSetData(aggMap, SET_2);
+  chartRev('chRevToday', byHotel);
+  chartOccBench('chOccToday', byHotel);
+  chartDonut('chDonutToday', byHotel, a.rev);
+  chartArrRev('chArrRevToday', byHotel);
+  chartRgi('chRgiToday', byHotel);
+}
 
-            renderTable(dataSet1, dataSet2);
+/* ================= TAB: MTD ================= */
+function renderMTD(){
+  ['chTrendMTD','chHotelMTD','chDonutMTD','chOccMTD','chArrRevMTD','chRgiMTD'].forEach(destroyCharts);
+  const [y,m] = (document.getElementById('fMonth').value || '').split('-').map(Number);
+  const yy = +document.getElementById('fYearMTD').value || y;
+  const hsel = document.getElementById('fHotelMTD').value;
+  let rows = ROWS.filter(r=>r.year===yy && r.month===m);
+  if(hsel) rows = rows.filter(r=>r.hotel===hsel);
+  const a = agg(rows);
+  if(!a){ document.getElementById('kpiMTD').innerHTML=''; return; }
 
-            const allMarketRev = filteredData.reduce((s, d) => s + d.revenue, 0);
-            const oakTreeData = dataSet1.hotels.find(h => h.hotel === 'Oak Tree Emerald');
-            
-            document.getElementById('card-revenue').innerText = formatRp(allMarketRev);
-            document.getElementById('card-oak-rev').innerText = oakTreeData ? formatRp(oakTreeData.revenue) : 'Rp 0';
-            document.getElementById('card-oak-occ').innerText = oakTreeData ? oakTreeData.occp.toFixed(2) + '%' : '0%';
-            document.getElementById('card-oak-rgi').innerText = oakTreeData ? oakTreeData.rgi.toFixed(2) : '0.00';
+  const pd = new Date(yy, m-1, 1);
+  let prow = ROWS.filter(r=>r.year===pd.getFullYear() && r.month===pd.getMonth());
+  if(hsel) prow = prow.filter(r=>r.hotel===hsel);
+  const pa = agg(prow);
+  const delta = pa && pa.rev ? (a.rev-pa.rev)/pa.rev*100 : null;
 
-            let allVisualDataMap = {};
-            [...dataSet1.hotels, ...dataSet2.hotels].forEach(h => {
-                if (!allVisualDataMap[h.hotel]) allVisualDataMap[h.hotel] = h;
-            });
-            const allHotels = Object.values(allVisualDataMap);
-            
-            renderCharts(allHotels, dataSet1);
-        }
+  const dayList = [...new Set(rows.map(r=>r.dateISO))];
+  const daysInMonth = new Date(yy, m+1, 0).getDate();
+  const elapsed = dayList.length;
 
-        function calculateSetData(aggMap, setArray) {
-            let setHotels = [];
-            let marketAvail = 0, marketSold = 0, marketRev = 0;
+  document.getElementById('mtdInfo').innerHTML = `Periode: <b>${MONTHS_ID[m]} ${yy}</b> · ${elapsed} dari ${daysInMonth} hari terdata` +
+    (pa ? `<br>vs ${MONTHS_ID[pd.getMonth()]} ${pd.getFullYear()}: <b>${fmtIDR(pa.rev)}</b>` : '');
 
-            setArray.forEach(hotelName => {
-                let hd = aggMap[hotelName] ? { ...aggMap[hotelName] } : { hotel: hotelName, available: 0, roomSold: 0, revenue: 0 };
-                marketAvail += hd.available;
-                marketSold += hd.roomSold;
-                marketRev += hd.revenue;
-                setHotels.push(hd);
-            });
+  document.getElementById('kpiMTD').innerHTML =
+    kpiCard('Revenue MTD', fmtIDR(a.rev), `${MONTHS_ID[m]} ${yy} · ${elapsed} hari`, '#818cf8', null, delta) +
+    kpiCard('Okupansi MTD', fmtPct1(a.occp), pa?`vs ${fmtPct1(pa.occp)} bulan lalu`:'rata-rata tertimbang', '#34d399') +
+    kpiCard('ARR MTD', fmtIDR(a.arr), pa?`vs ${fmtIDR(pa.arr)} bulan lalu`:'', '#fbbf24') +
+    kpiCard('RevPAR MTD', fmtIDR(a.revpar), pa?`vs ${fmtIDR(pa.revpar)} bulan lalu`:'', '#f87171');
 
-            let marketOcc = marketAvail ? (marketSold / marketAvail) * 100 : 0;
-            let marketArr = marketSold ? (marketRev / marketSold) : 0;
-            let marketRevPar = marketAvail ? (marketRev / marketAvail) : 0;
+  const { byHotel } = reportData(rows);
+  const byDay = [...groupBy(rows, r=>r.dateISO).entries()].sort((x,z)=>x[0]<z[0]?-1:1).map(([d,rs])=>({d,...agg(rs)}));
+  const bestH = byHotel[0], bestD = byDay.reduce((x,z)=>z.rev>x.rev?z:x);
+  const losers = byHotel.filter(x=>x.fairShare<0);
+  document.getElementById('insightMTD').innerHTML = `
+    <li>📅 Hari terbaik bulan ini: <b>${new Date(bestD.d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long'})}</b> — revenue <b>${fmtIDR(bestD.rev)}</b> (Occp ${fmtPct1(bestD.occp)}).</li>
+    <li>🏆 Kontributor terbesar: <b>${bestH.h}</b> menyumbang <b>${fmtPct1(a.rev?bestH.rev/a.rev*100:0)}</b> dari total revenue bulan ini (RGI ${fmt2(bestH.rgi)}).</li>
+    ${losers.length?`<li>⚠️ Hotel dengan Fair Share negatif bulan ini: ${losers.map(x=>'<b>'+x.h+'</b> ('+fmtPct1(x.fairShare)+')').join(', ')} — pasar mereka "berpindah" ke kompetitor.</li>`:`<li>✅ Semua hotel mengambil porsi pasar sesuai potensi (Fair Share ≥ 0) bulan ini.</li>`}
+    ${pa?`<li>📊 Revenue bulan ini ${delta>=0?'naik':'turun'} <b>${fmtPct1(Math.abs(delta))}</b> dibanding ${MONTHS_ID[pd.getMonth()]} ${pd.getFullYear()}.</li>`:''}`;
 
-            setHotels.forEach(h => {
-                h.occp = h.available ? (h.roomSold / h.available) * 100 : 0;
-                h.arr = h.roomSold ? h.revenue / h.roomSold : 0;
-                h.revPar = h.available ? h.revenue / h.available : 0;
-                h.natShare = marketAvail ? (h.available / marketAvail) * 100 : 0;
-                h.actShare = marketSold ? (h.roomSold / marketSold) * 100 : 0;
-                h.fairShare = h.actShare - h.natShare;
-                h.mpi = marketOcc ? h.occp / marketOcc : 0;
-                h.ari = marketArr ? h.arr / marketArr : 0;
-                h.rgi = marketRevPar ? h.revPar / marketRevPar : 0;
-            });
+  document.getElementById('tblMTD').innerHTML = reportTable(rows);
+  document.getElementById('tblFcMTD').innerHTML = forecastTable(rows, 'BULAN INI', daysInMonth, elapsed);
 
-            let sortedRgi = [...setHotels].sort((a,b) => b.rgi - a.rgi);
-            let sortedOcc = [...setHotels].sort((a,b) => b.occp - a.occp);
-            
-            setHotels.forEach(h => {
-                if(h.available === 0) { h.rankRgi = '-'; h.rankOcc = '-'; } 
-                else {
-                   h.rankRgi = sortedRgi.findIndex(x => x.hotel === h.hotel) + 1;
-                   h.rankOcc = sortedOcc.findIndex(x => x.hotel === h.hotel) + 1;
-                }
-            });
+  mkChart('chTrendMTD',{data:{labels:byDay.map(x=>new Date(x.d+'T00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'})),
+    datasets:[
+      {type:'bar',label:'Revenue',data:byDay.map(x=>x.rev),backgroundColor:'rgba(129,140,248,.7)',borderRadius:6,yAxisID:'y',order:2},
+      {type:'line',label:'Okupansi',data:byDay.map(x=>+x.occp.toFixed(2)),borderColor:'#34d399',backgroundColor:'#34d399',tension:.35,yAxisID:'y1',pointRadius:4,order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{boxWidth:12,font:{size:11}}},tooltip:{...tooltipDark,callbacks:{label:c=>c.dataset.label==='Revenue'?fmtIDR(c.raw):'Okupansi: '+fmtPct1(c.raw)}}},
+    scales:{y:{position:'left',ticks:{callback:v=>(v/1e6).toLocaleString('id-ID')+' jt'}},
+            y1:{position:'right',max:110,ticks:{callback:v=>v+'%'},grid:{drawOnChartArea:false}},
+            x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
-            let n = setHotels.length;
-            return {
-                hotels: setHotels,
-                market: {
-                    hotel: 'City Result', available: marketAvail, roomSold: marketSold, occp: marketOcc, arr: marketArr, revPar: marketRevPar,
-                    revenue: marketRev, natShare: null, actShare: null, fairShare: null, mpi: null, ari: null, rgi: null, rankRgi: null, rankOcc: null
-                },
-                average: {
-                    hotel: 'AVERAGE', available: marketAvail / n, roomSold: marketSold / n,
-                    occp: setHotels.reduce((s, h) => s + h.occp, 0) / n, arr: setHotels.reduce((s, h) => s + h.arr, 0) / n, revPar: setHotels.reduce((s, h) => s + h.revPar, 0) / n,
-                    revenue: setHotels.reduce((s, h) => s + h.revenue, 0) / n,
-                    natShare: null, actShare: null, fairShare: null, mpi: null, ari: null, rgi: null, rankRgi: null, rankOcc: null
-                }
-            };
-        }
+  mkChart('chHotelMTD',{type:'bar',data:{labels:byHotel.map(x=>x.h),datasets:[{data:byHotel.map(x=>x.rev),backgroundColor:byHotel.map((_,i)=>COLORS[i%9]),borderRadius:8}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipDark,callbacks:{label:c=>fmtIDR(c.raw)}}},
+    scales:{x:{ticks:{callback:v=>(v/1e6).toLocaleString('id-ID')+' jt'}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
 
-        const formatRp = (num) => num ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num) : '0';
-        const formatDec = (num, digit=2) => (num !== null && num !== undefined) ? num.toFixed(digit) : '';
-        const formatInt = (num) => num ? new Intl.NumberFormat('id-ID').format(Math.round(num)) : '0';
+  chartDonut('chDonutMTD', byHotel, a.rev);
+  chartOccBench('chOccMTD', byHotel);
+  chartArrRev('chArrRevMTD', byHotel);
+  chartRgi('chRgiMTD', byHotel);
+}
 
-        function renderRow(data, trClass = "") {
-            const isOak = data.hotel === 'Oak Tree Emerald';
-            let finalClass = trClass;
-            if (isOak) finalClass += " row-oaktree";
+/* ================= TAB: YTD ================= */
+function renderYTD(){
+  ['chMonthlyYTD','chOccYTD','chBubbleYTD','chHotelYTD','chArrRevYTD','chSeasonYTD'].forEach(destroyCharts);
+  const y = +document.getElementById('fYearYTD').value;
+  const hsel = document.getElementById('fHotelYTD').value;
+  let rows = ROWS.filter(r=>r.year===y);
+  if(hsel) rows = rows.filter(r=>r.hotel===hsel);
+  const a = agg(rows);
+  if(!a){ document.getElementById('kpiYTD').innerHTML=''; return; }
 
-            let fairShareColor = (data.fairShare !== null && data.fairShare < 0) ? 'text-rose-400 font-bold' : (data.fairShare > 0 ? 'text-emerald-400 font-bold' : '');
-            let rgiColor = (data.rgi !== null && data.rgi >= 1) ? 'text-emerald-400 font-bold' : (data.rgi !== null && data.rgi < 1 ? 'text-rose-400 font-bold' : '');
+  const pa = agg(ROWS.filter(r=>r.year===y-1));
+  const delta = pa && pa.rev ? (a.rev-pa.rev)/pa.rev*100 : null;
+  const elapsed = [...new Set(rows.map(r=>r.dateISO))].length;
+  const isLeap = (y%4===0 && y%100!==0) || y%400===0;
+  const daysInYear = isLeap?366:365;
 
-            return `
-                <tr class="${finalClass}">
-                    <td>${data.hotel}</td>
-                    <td>${formatInt(data.available)}</td>
-                    <td>${formatInt(data.roomSold)}</td>
-                    <td>${formatDec(data.occp)}</td>
-                    <td>${formatRp(data.arr)}</td>
-                    <td>${formatRp(data.revPar)}</td>
-                    <td>${formatRp(data.revenue)}</td>
-                    <td>${data.natShare !== null ? formatDec(data.natShare) : ''}</td>
-                    <td>${data.actShare !== null ? formatDec(data.actShare) : ''}</td>
-                    <td class="${fairShareColor}">${data.fairShare !== null ? formatDec(data.fairShare) : ''}</td>
-                    <td>${data.mpi !== null ? formatDec(data.mpi) : ''}</td>
-                    <td>${data.ari !== null ? formatDec(data.ari) : ''}</td>
-                    <td class="col-rgi ${rgiColor}">${data.rgi !== null ? formatDec(data.rgi) : ''}</td>
-                    <td>${data.rankRgi !== null ? data.rankRgi : ''}</td>
-                    <td>${data.rankOcc !== null ? data.rankOcc : ''}</td>
-                </tr>
-            `;
-        }
+  document.getElementById('ytdInfo').innerHTML = `Periode: Tahun <b>${y}</b> · ${[...new Set(rows.map(r=>r.month))].length} bulan · ${elapsed} hari terdata` +
+    (pa ? `<br>vs tahun ${y-1}: <b>${fmtIDR(pa.rev)}</b>` : '');
 
-        function renderTable(set1, set2) {
-            let html = '';
-            
-            html += `<tr><td colspan="15" class="section-header tracking-widest"><i class="fas fa-layer-group mr-2"></i>SET 1 - COMPETITOR</td></tr>`;
-            set1.hotels.forEach(h => { html += renderRow(h); });
-            html += renderRow(set1.market, "row-city");
-            html += renderRow(set1.average, "row-avg");
+  document.getElementById('kpiYTD').innerHTML =
+    kpiCard('Revenue YTD', fmtIDR(a.rev), 'Akumulasi tahun '+y, '#818cf8', null, delta) +
+    kpiCard('Okupansi YTD', fmtPct1(a.occp), 'rata-rata tertimbang', '#34d399') +
+    kpiCard('ARR YTD', fmtIDR(a.arr), 'harga rata-rata terjual', '#fbbf24') +
+    kpiCard('RevPAR YTD', fmtIDR(a.revpar), 'standar emas performa', '#f87171');
 
-            html += `<tr><td colspan="15" class="section-header tracking-widest mt-4 border-t-4 border-slate-900"><i class="fas fa-layer-group mr-2"></i>SET 2 - COMPETITOR</td></tr>`;
-            set2.hotels.forEach(h => { html += renderRow(h); });
-            html += renderRow(set2.market, "row-city");
+  const byMonth = [...Array(12).keys()].map(mo=>{
+    const rs = rows.filter(r=>r.month===mo);
+    return {mo, ...(agg(rs) || {rev:0,occp:0,arr:0,revpar:0,avail:0,n:0})};
+  });
+  const cum=[]; byMonth.reduce((s,x)=>{const v=s+x.rev;cum.push(v);return v;},0);
+  const bestM = byMonth.reduce((x,z)=>z.rev>x.rev?z:x);
+  const { byHotel } = reportData(rows);
+  const champ = byHotel.reduce((x,z)=>z.rgi>x.rgi?z:x);
+  const losers = byHotel.filter(x=>x.fairShare<0);
 
-            document.getElementById('table-body').innerHTML = html;
-        }
+  document.getElementById('insightYTD').innerHTML = `
+    <li>📆 Bulan terkuat tahun ${y}: <b>${MONTHS_ID[bestM.mo]}</b> — revenue <b>${fmtIDR(bestM.rev)}</b> (Occp ${fmtPct1(bestM.occp)}). Siapkan staf & stok untuk membalik pola musim ini tahun depan.</li>
+    <li>👑 Hotel paling efisien tahun ini: <b>${champ.h}</b> — RGI <b>${fmt2(champ.rgi)}</b> (Occp ${fmtPct1(champ.occp)} × ARR ${fmtIDR(champ.arr)}).</li>
+    ${losers.length?`<li>⚠️ Hotel dengan Fair Share negatif tahun berjalan: ${losers.map(x=>'<b>'+x.h+'</b> ('+fmtPct1(x.fairShare)+')').join(', ')}.</li>`:`<li>✅ Secara tahunan, semua hotel mempertahankan porsi pasarnya.</li>`}
+    ${pa?`<li>📊 Total revenue ${delta>=0?'tumbuh':'menurun'} <b>${fmtPct1(Math.abs(delta))}</b> dibanding tahun ${y-1}.</li>`:`<li>ℹ️ Belum ada data tahun ${y-1} untuk perbandingan YoY.</li>`}`;
 
-        function renderCharts(allData, set1Data) {
-            const colorOakTree = '#10b981'; 
-            const colorCompetitorBase = 'rgba(56, 189, 248, 0.7)'; 
-            const getChartColors = (labels) => labels.map(l => l === 'Oak Tree Emerald' ? colorOakTree : colorCompetitorBase);
-            
-            allData.sort((a,b) => b.occp - a.occp);
-            const labelsAll = allData.map(d => d.hotel);
-            const colorsAll = getChartColors(labelsAll);
+  document.getElementById('tblYTD').innerHTML = reportTable(rows);
+  document.getElementById('tblFcYTD').innerHTML = forecastTable(rows, 'TAHUN '+y, daysInYear, elapsed);
 
-            if (occpChart) occpChart.destroy();
-            occpChart = new Chart(document.getElementById('occpChart'), {
-                type: 'bar',
-                data: { labels: labelsAll, datasets: [{ label: 'Occupancy (%)', data: allData.map(d => d.occp.toFixed(2)), backgroundColor: colorsAll, borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+  mkChart('chMonthlyYTD',{data:{labels:byMonth.map(x=>MONTHS_ID[x.mo].slice(0,3)),
+    datasets:[
+      {type:'bar',label:'Revenue Bulanan',data:byMonth.map(x=>x.rev),backgroundColor:byMonth.map(x=>x.rev?'rgba(56,189,248,.75)':'rgba(142,163,200,.25)'),borderRadius:8,yAxisID:'y',order:2},
+      {type:'line',label:'Kumulatif YTD',data:cum,borderColor:'#f5c451',backgroundColor:'#f5c451',tension:.3,pointRadius:4,yAxisID:'y',order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,font:{size:11}}},tooltip:{...tooltipDark,callbacks:{label:c=>c.dataset.label+': '+fmtIDR(c.raw)}}},
+    scales:{y:{ticks:{callback:v=>(v/1e9).toLocaleString('id-ID')+' M'}},x:{grid:{display:false}}}}});
 
-            if (revShareChart) revShareChart.destroy();
-            const sharePalette = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
-            revShareChart = new Chart(document.getElementById('revShareChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: labelsAll,
-                    datasets: [{
-                        data: allData.map(d => d.revenue),
-                        backgroundColor: sharePalette,
-                        borderWidth: 2,
-                        borderColor: '#1e293b' 
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right', labels: { color: '#cbd5e1', boxWidth: 12 } },
-                        tooltip: { callbacks: { label: (ctx) => ` Rp ${(ctx.raw/1000000).toFixed(1)} Jt` } }
-                    },
-                    cutout: '65%'
-                }
-            });
+  mkChart('chOccYTD',{type:'line',data:{labels:byMonth.map(x=>MONTHS_ID[x.mo].slice(0,3)),
+    datasets:[{label:'Okupansi',data:byMonth.map(x=>x.n?+x.occp.toFixed(2):null),borderColor:'#34d399',backgroundColor:'rgba(52,211,153,.12)',fill:true,tension:.35,spanGaps:true,pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipDark,callbacks:{label:c=>'Okupansi: '+fmtPct1(c.raw)}}},
+    scales:{y:{max:110,ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}});
 
-            if (shareChart) shareChart.destroy();
-            const set1Labels = set1Data.hotels.map(h => h.hotel);
-            const actShares = set1Data.hotels.map(h => h.actShare);
-            const fairShares = set1Data.hotels.map(h => h.natShare); 
+  mkChart('chBubbleYTD',{type:'bubble',data:{datasets:byHotel.map((x,i)=>({label:x.h,data:[{x:+x.occp.toFixed(2),y:x.revpar,r:Math.max(7,Math.sqrt(x.rev)/480)}],backgroundColor:COLORS[i%9]+'B3',borderColor:COLORS[i%9]}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10.5}}},tooltip:{...tooltipDark,callbacks:{label:c=>{const d=byHotel[c.datasetIndex];return d.h+': Occp '+fmtPct1(d.occp)+' · RevPAR '+fmtIDR(d.revpar)+' · Rev '+fmtIDR(d.rev);}}}},
+    scales:{x:{title:{display:true,text:'Okupansi (%) →'},ticks:{callback:v=>v+'%'}},y:{title:{display:true,text:'RevPAR (Rp) →'},ticks:{callback:v=>(v/1e3).toLocaleString('id-ID')+' rb'}}}}});
 
-            shareChart = new Chart(document.getElementById('shareChart'), {
-                type: 'bar',
-                data: {
-                    labels: set1Labels,
-                    datasets: [
-                        { label: 'Actual Share (%)', data: actShares.map(v => v ? v.toFixed(2) : 0), backgroundColor: '#38bdf8', borderRadius: 4 },
-                        { label: 'Fair Share Target (%)', data: fairShares.map(v => v ? v.toFixed(2) : 0), type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 2, pointRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
-                }
-            });
+  mkChart('chHotelYTD',{type:'bar',data:{labels:byHotel.map(x=>x.h),datasets:[{data:byHotel.map(x=>x.rev),backgroundColor:byHotel.map((_,i)=>COLORS[i%9]),borderRadius:8}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tooltipDark,callbacks:{label:c=>fmtIDR(c.raw)}}},
+    scales:{x:{ticks:{callback:v=>(v/1e9).toLocaleString('id-ID')+' M'}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
 
-            if (arrRevParChart) arrRevParChart.destroy();
-            arrRevParChart = new Chart(document.getElementById('arrRevParChart'), {
-                type: 'bar',
-                data: {
-                    labels: labelsAll,
-                    datasets: [
-                        { label: 'ARR', data: allData.map(d => d.arr), backgroundColor: '#475569', borderRadius: 2 },
-                        { label: 'RevPAR', data: allData.map(d => d.revPar), backgroundColor: colorsAll, borderRadius: 2 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { labels: { color: '#cbd5e1' } },
-                        tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${formatRp(ctx.raw)}` } }
-                    }
-                }
-            });
+  chartArrRev('chArrRevYTD', byHotel);
 
-            if (indexChart) indexChart.destroy();
-            indexChart = new Chart(document.getElementById('indexChart'), {
-                type: 'bar',
-                data: {
-                    labels: set1Labels,
-                    datasets: [
-                        { label: 'Index M.P.I (Occ)', data: set1Data.hotels.map(h => h.mpi ? h.mpi.toFixed(2) : 0), backgroundColor: '#6366f1', borderRadius: 3 },
-                        { label: 'Index R.G.I (Rev)', data: set1Data.hotels.map(h => h.rgi ? h.rgi.toFixed(2) : 0), backgroundColor: '#10b981', borderRadius: 3 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#cbd5e1' } } },
-                    scales: { y: { suggestedMax: 1.5, grid: { color: '#334155' } } }
-                }
-            });
-        }
+  const avgM = byMonth.reduce((s,x)=>s+x.rev,0)/12;
+  mkChart('chSeasonYTD',{type:'line',data:{labels:byMonth.map(x=>MONTHS_ID[x.mo].slice(0,3)),
+    datasets:[{label:'Revenue Index',data:byMonth.map(x=>x.rev?+(x.rev/avgM*100).toFixed(1):null),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.12)',fill:true,tension:.35,spanGaps:true,pointRadius:4},
+      {type:'line',label:'Rata-rata (100)',data:byMonth.map(()=>100),borderColor:'#f87171',borderDash:[6,5],borderWidth:2,pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,font:{size:11}}},tooltip:{...tooltipDark,callbacks:{label:c=>c.dataset.label+': '+fmt2(c.raw)}}},
+    scales:{y:{ticks:{callback:v=>v}},x:{grid:{display:false}}}}});
+}
 
-        document.addEventListener('DOMContentLoaded', fetchData);
-    </script>
+/* ================= NAV ================= */
+function switchTab(t){
+  currentTab=t;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  ['today','mtd','ytd'].forEach(x=>document.getElementById('tab-'+x).style.display = x===t?'block':'none');
+  renderAll();
+}
+function renderAll(){
+  if(currentTab==='today') renderToday();
+  else if(currentTab==='mtd') renderMTD();
+  else renderYTD();
+}
+
+/* ================= INIT ================= */
+loadData(false);
+</script>
 </body>
 </html>
