@@ -375,54 +375,45 @@ function render(){
 
 const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
 
+const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
+const SHEET_NAME = "input harian"; // Nama sheet yang mau ditarik datanya
+
 function setLiveStatus(state, note){
   const el = document.getElementById('liveStatus');
   const map = {
-    live: '🟢 Live — tersambung ke Google Sheet, cek perubahan tiap 30 detik',
-    offline: '⚪ Mode contoh — buka halaman ini lewat Claude agar bisa live sync',
-    disconnected: '🟠 Google Drive belum terhubung/diizinkan — data memakai contoh terakhir',
-    error: '🔴 Gagal memuat data live — memakai data terakhir yang berhasil'
+    live: note || '🟢 Live — Tersambung ke Google Sheet',
+    offline: note || '⚪ Mengambil data...',
+    error: note || '🔴 Gagal memuat data live'
   };
   el.textContent = map[state] || note || '';
 }
 
-async function initLiveSync(){
-  let mcp = null;
-  try { mcp = await claude.use('mcp'); } catch(e){ mcp = null; }
-  if(!mcp){ setLiveStatus('offline'); return; }
-  mcp.watchTool('Google Drive', 'download_file_content',
-    { fileId: SHEET_FILE_ID, exportMimeType: 'text/csv' },
-    (ev) => {
-      if(ev.type === 'data'){
-        try{
-          const payload = ev.result.payload || ev.result;
-          const csvText = atob(payload.content);
-          loadData(csvText);
-          setLiveStatus('live');
-        } catch(e){ setLiveStatus('error'); }
-      } else {
-        const code = ev.error && ev.error.code;
-        setLiveStatus((code==='needs_reauth'||code==='server_not_connected'||code==='selection_required') ? 'disconnected' : 'error');
-      }
-    },
-    { refetchInterval: 30000 }
-  );
+async function fetchSheetData() {
+  setLiveStatus('offline', '⚪ Menarik data terbaru dari Google Sheet...');
+  
+  // Endpoint untuk mengambil format CSV langsung dari sheet tertentu
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_FILE_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Gagal terhubung ke Google Sheet.');
+    
+    const csvText = await response.text();
+
+    // Jika yang dikembalikan adalah halaman HTML login Google, berarti Sheet belum diset Public
+    if (csvText.trim().toLowerCase().startsWith("<!doctype html>")) {
+      throw new Error('🔴 Sheet masih Private. Ubah akses Share ke "Anyone with the link".');
+    }
+
+    loadData(csvText);
+    setLiveStatus('live', `🟢 Live — Diperbarui pada ${new Date().toLocaleTimeString()}`);
+  } catch (error) {
+    console.error(error);
+    setLiveStatus('error', error.message);
+  }
 }
 
-document.getElementById('dateFrom').addEventListener('change', render);
-document.getElementById('dateTo').addEventListener('change', render);
-document.getElementById('mtdMonth').addEventListener('change', renderMTD);
-document.getElementById('mtdYear').addEventListener('change', renderMTD);
-document.getElementById('ytdYear').addEventListener('change', renderYTD);
-document.getElementById('fileInput').addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => loadData(ev.target.result);
-  reader.readAsText(f);
-});
-
-loadData(DEFAULT_CSV);
-initLiveSync();
-</script>
-</body>
-</html>
+function initLiveSync(){
+  fetchSheetData(); // Tarik data saat halaman pertama kali dibuka
+  setInterval(fetchSheetData, 30000); // Lakukan auto-update setiap 30 detik
+}
