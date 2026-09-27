@@ -159,10 +159,24 @@ let chartInstances = {};
 const fmtN = n => Math.round(n).toLocaleString('id-ID');
 const fmt1 = n => (isFinite(n)?n:0).toFixed(1);
 const fmt2 = n => (isFinite(n)?n:0).toFixed(2);
+
+// Robust date parser (Mendukung format '01 Juli 2026' dan '01/07/2026')
 const toDateObj = (str) => {
-  const [d,m,y] = str.trim().split('/').map(Number);
-  return new Date(y,m-1,d);
+  if (str.includes('/')) {
+    const [d, m, y] = str.trim().split('/').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const parts = str.trim().split(' ');
+  if (parts.length >= 3) {
+    const d = parseInt(parts[0]);
+    const mStr = parts[1].toLowerCase();
+    const y = parseInt(parts[2]);
+    const m = MONTH_NAMES.findIndex(month => month.toLowerCase() === mStr);
+    if (m !== -1) return new Date(y, m, d);
+  }
+  return new Date(str); // fallback
 };
+
 const toInputDate = d => {
   const z = n => ('0'+n).slice(-2);
   return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
@@ -171,24 +185,34 @@ const toInputDate = d => {
 // --- DATA PARSING & AGGREGATION ---
 function parseCSV(text){
   const lines = text.trim().split(/\r?\n/);
+  // Cari baris yang mengandung header tanggal/date
   const headIdx = lines.findIndex(f => f.toLowerCase().includes('tanggal') || f.toLowerCase().includes('date'));
   if(headIdx<0) return [];
   
   const head = lines[headIdx].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,''));
-  const iDate=head.indexOf('tanggal') > -1 ? head.indexOf('tanggal') : head.indexOf('date');
-  const iHotel=head.indexOf('hotel'), iAvail=head.indexOf('available'), iSold=head.indexOf('room sold'), iRev=head.indexOf('room revenue');
+  
+  // Mencari index kolom dengan fleksibel
+  const iDate = head.findIndex(h => h === 'tanggal' || h === 'date');
+  const iHotel = head.findIndex(h => h.includes('hotel'));
+  const iAvail = head.findIndex(h => h.includes('available'));
+  const iSold = head.findIndex(h => h.includes('room sold'));
+  const iRev = head.findIndex(h => h.includes('room revenue') || h.includes('revenue'));
   
   const out=[];
   for(let i=headIdx+1;i<lines.length;i++){
-    const cols = lines[i].split(',').map(c=>c.replace(/['"]/g,'').trim());
+    // Memisah CSV koma tanpa memecah isi kutip
+    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c=>c.replace(/['"]/g,'').trim());
+    
     if(!cols[iDate] || !cols[iHotel]) continue;
     
     const dateStr = cols[iDate];
-    if(!dateStr.includes('/')) continue;
+    const hotelName = cols[iHotel];
+    const avail = Number(cols[iAvail])||0;
+    const sold = Number(cols[iSold])||0;
+    const rev = Number(cols[iRev])||0;
     
-    const avail = Number(cols[iAvail])||0, sold = Number(cols[iSold])||0, rev = Number(cols[iRev])||0;
-    if(!avail && !sold) continue;
-    out.push({date: toDateObj(dateStr), dateStr, hotel: cols[iHotel], avail, sold, rev});
+    if(!avail && !sold) continue; // Skip baris jika available dan sold kosong
+    out.push({date: toDateObj(dateStr), dateStr, hotel: hotelName, avail, sold, rev});
   }
   return out;
 }
@@ -221,7 +245,7 @@ function aggregateRows(rowsSubset){
     return {hotel:h, avail:a.avail, sold:a.sold, occ, arr, revpar, rev:a.rev, nat, act, fair, mpi, ari, rgi};
   });
   
-  rows.sort((a,b)=>b.rgi-a.rgi); // Default sort by RGI
+  rows.sort((a,b)=>b.rgi-a.rgi);
   return {rows, city, cityOcc, cityArr, cityRevpar, hotels};
 }
 
@@ -233,7 +257,6 @@ function drawChart(id, type, data, options) {
 const defaultOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8fa3c4'}}}, scales:{x:{ticks:{color:'#8fa3c4'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#8fa3c4'},grid:{color:'rgba(255,255,255,.05)'}}}};
 const pieOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#8fa3c4'}}}, borderwidth:0};
 
-
 // --- UI FILTERS ---
 function initFilters() {
   const filterToday = document.getElementById('filterTodayDate');
@@ -241,14 +264,12 @@ function initFilters() {
   const filterMtdY = document.getElementById('filterMtdYear');
   const filterYtdY = document.getElementById('filterYtdYear');
   
-  // Jika filter sudah terisi (pengguna sudah memilih), tidak perlu dioverwrite saat live sync.
   if(filterToday.value) return; 
   
   const years = [...new Set(ROWS.map(r=>r.date.getFullYear()))].sort((a,b)=>b-a);
   const latestTime = Math.max(...ROWS.map(r=>r.date.getTime()));
   const latestDate = new Date(latestTime);
 
-  // Set default filters to the latest date available in data
   filterToday.value = toInputDate(latestDate);
   
   filterMtdM.innerHTML = MONTH_NAMES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
@@ -261,13 +282,11 @@ function initFilters() {
   filterYtdY.innerHTML = yearOpts;
   filterYtdY.value = latestDate.getFullYear();
 
-  // Attach Events
   filterToday.addEventListener('change', renderTodayWrapper);
   filterMtdM.addEventListener('change', renderMtdWrapper);
   filterMtdY.addEventListener('change', renderMtdWrapper);
   filterYtdY.addEventListener('change', renderYtdWrapper);
 }
-
 
 // --- RENDER LOGIC WRAPPERS ---
 function renderAll() {
@@ -316,7 +335,6 @@ function renderYtdWrapper() {
   document.getElementById('ytdDateStr').textContent = contextStr;
   renderYTD(ytdData, contextStr);
 }
-
 
 // --- PANEL RENDERING ---
 function generateAnalysisText(data, contextStr) {
@@ -468,14 +486,13 @@ async function fetchSheetData() {
     if(newRows.length > 0) {
       ROWS = newRows;
       
-      // Initialize chips only once
       if(HOTELS.length === 0) {
           HOTELS = [...new Set(ROWS.map(r=>r.hotel))];
           selectedHotels = new Set(HOTELS);
           buildChips();
       }
       
-      initFilters(); // Render dropdowns with available data first
+      initFilters();
       renderAll();
       
       setLiveStatus('live', `🟢 Live — Update terakhir: ${new Date().toLocaleTimeString('id-ID')}`);
@@ -492,7 +509,6 @@ async function fetchSheetData() {
 // Start sequence
 fetchSheetData(); 
 setInterval(fetchSheetData, 30000); 
-
 </script>
 </body>
 </html>
