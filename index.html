@@ -11,8 +11,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         /* TEMA NAVY & SLATE */
-        body { background-color: #0f172a; color: #f8fafc; } /* Slate 900 */
-        .card-panel { background-color: #1e293b; border-color: #334155; } /* Slate 800 */
+        body { background-color: #0f172a; color: #f8fafc; } 
+        .card-panel { background-color: #1e293b; border-color: #334155; } 
         
         .tab-active { border-bottom: 3px solid #38bdf8; color: #38bdf8; font-weight: 700; }
         .tab-inactive { color: #94a3b8; font-weight: 500; }
@@ -28,7 +28,6 @@
         .section-header { background-color: #334155 !important; color: #f8fafc; text-align: left !important; font-weight: bold; font-size: 13px !important; padding: 8px 12px !important;}
         .col-rgi { background-color: rgba(56, 189, 248, 0.05); }
 
-        /* Scrollbar Customization for Tables */
         ::-webkit-scrollbar { height: 8px; width: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -37,14 +36,12 @@
 </head>
 <body class="font-sans antialiased">
 
-    <!-- Loading Overlay -->
     <div id="loading" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-center transition-opacity duration-300">
         <i class="fas fa-circle-notch fa-spin text-5xl text-sky-400 mb-4"></i>
         <h2 class="text-xl font-bold text-white">Menyinkronkan Data...</h2>
-        <p class="text-slate-400 mt-2">Menarik algoritma terbaru dari Google Sheets</p>
+        <p class="text-slate-400 mt-2">Membaca tanggal pada Sheet Input Harian</p>
     </div>
 
-    <!-- Header -->
     <header class="card-panel border-b px-8 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-40 gap-4">
         <div class="flex items-center gap-4 w-full md:w-auto">
             <div class="bg-gradient-to-br from-sky-400 to-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-900/50">
@@ -62,7 +59,6 @@
 
     <main class="max-w-[1400px] mx-auto px-4 md:px-8 py-8">
         
-        <!-- Tab Control & Filters -->
         <div class="card-panel rounded-2xl shadow-xl border p-5 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div class="flex flex-wrap gap-6 border-b border-slate-600 w-full lg:w-auto">
                 <button onclick="switchTab('harian')" id="tab-harian" class="tab-active pb-3 px-2 text-lg uppercase tracking-wide">Harian</button>
@@ -70,11 +66,14 @@
                 <button onclick="switchTab('ytd')" id="tab-ytd" class="tab-inactive pb-3 px-2 text-lg uppercase tracking-wide">YTD (Year)</button>
             </div>
             
-            <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700">
-                <span class="text-sm font-semibold text-slate-400 px-2"><i class="fas fa-filter mr-1"></i> FILTER PERIODE:</span>
-                <input type="date" id="filter-harian" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none" onchange="updateDashboard()">
-                <input type="month" id="filter-mtd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden" onchange="updateDashboard()">
-                <select id="filter-ytd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden w-32" onchange="updateDashboard()"></select>
+            <div class="flex flex-col items-end gap-1 w-full md:w-auto">
+                <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700 w-full md:w-auto justify-between">
+                    <span class="text-sm font-semibold text-slate-400 px-2"><i class="fas fa-filter mr-1"></i> FILTER:</span>
+                    <input type="date" id="filter-harian" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none w-full md:w-auto" onchange="updateDashboard()">
+                    <input type="month" id="filter-mtd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden w-full md:w-auto" onchange="updateDashboard()">
+                    <select id="filter-ytd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden w-full md:w-32" onchange="updateDashboard()"></select>
+                </div>
+                <span id="data-range-info" class="text-[11px] text-sky-400 font-medium pr-1"></span>
             </div>
         </div>
 
@@ -85,7 +84,6 @@
         </div>
 
         <div id="dashboard-content">
-            <!-- Key Metrics Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
                 <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
@@ -113,10 +111,7 @@
                 </div>
             </div>
 
-            <!-- ANALYTICS CHARTS SECTION (Expanded) -->
             <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                
-                <!-- Chart 1: Revenue Share -->
                 <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
                     <div class="mb-4">
                         <h3 class="text-lg font-bold text-white"><i class="fas fa-chart-pie text-sky-400 mr-2"></i>Market Revenue Share</h3>
@@ -127,7 +122,6 @@
                     </div>
                 </div>
 
-                <!-- Chart 2: Occupancy Bar -->
                 <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
                     <div class="mb-4">
                         <h3 class="text-lg font-bold text-white"><i class="fas fa-bed text-sky-400 mr-2"></i>Tingkat Hunian (%)</h3>
@@ -138,7 +132,6 @@
                     </div>
                 </div>
 
-                <!-- Chart 3: Fair Share vs Actual Share -->
                 <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
                     <div class="mb-4">
                         <h3 class="text-lg font-bold text-white"><i class="fas fa-balance-scale text-sky-400 mr-2"></i>Share Gap (Actual vs Fair)</h3>
@@ -149,7 +142,6 @@
                     </div>
                 </div>
 
-                <!-- Chart 4: ARR vs RevPAR -->
                 <div class="card-panel rounded-2xl shadow-lg border p-6 lg:col-span-2 flex flex-col">
                     <div class="mb-4">
                         <h3 class="text-lg font-bold text-white"><i class="fas fa-tags text-sky-400 mr-2"></i>Analisa Harga (ARR vs RevPAR)</h3>
@@ -160,7 +152,6 @@
                     </div>
                 </div>
 
-                <!-- Chart 5: Performance Indices (MPI & RGI) -->
                 <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
                     <div class="mb-4">
                         <h3 class="text-lg font-bold text-white"><i class="fas fa-trophy text-amber-400 mr-2"></i>Performance Index (vs Market)</h3>
@@ -172,7 +163,6 @@
                 </div>
             </div>
 
-            <!-- TABEL LAPORAN LENGKAP -->
             <div class="card-panel rounded-2xl shadow-lg border mb-8 overflow-hidden">
                 <div class="p-5 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
                     <div>
@@ -202,7 +192,6 @@
                             </tr>
                         </thead>
                         <tbody id="table-body">
-                            <!-- Baris akan dimasukkan oleh JS -->
                         </tbody>
                     </table>
                 </div>
@@ -212,7 +201,6 @@
     </main>
 
     <script>
-        // Setujui tema Chart.js untuk Dark Mode
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.borderColor = '#334155';
         Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
@@ -222,11 +210,9 @@
         let rawData = [];
         let currentTab = 'harian';
 
-        // Definisi Set Kompetitor Sesuai Gambar Laporan
         const SET_1 = ['Oak Tree Emerald', 'Grand Edge', 'Grand Candi', 'Patra Jasa', 'Noormans', 'Wimarion'];
         const SET_2 = ['Oak Tree Emerald', 'Ciputra', 'Aruss', 'Padma'];
 
-        // Variabel Chart
         let occpChart = null, revShareChart = null, arrRevParChart = null, shareChart = null, indexChart = null;
 
         async function fetchData() {
@@ -263,7 +249,7 @@
                 if (isNaN(parseFloat(row[2]))) continue; 
 
                 processed.push({
-                    tanggal: row[0],
+                    tanggal: row[0].trim(), // Ambil string asli YYYY-MM-DD
                     hotel: row[1].trim(),
                     available: parseFloat(row[2]) || 0,
                     roomSold: parseFloat(row[3]) || 0,
@@ -275,22 +261,43 @@
         }
 
         function setupFilters() {
-            const dates = rawData.map(d => new Date(d.tanggal));
-            const maxDate = new Date(Math.max(...dates));
+            if (rawData.length === 0) return;
+
+            // 1. Ekstrak Semua Teks Tanggal Unik Secara Presisi
+            const uniqueDates = [...new Set(rawData.map(d => d.tanggal))].sort().reverse(); // Format YYYY-MM-DD (Terbaru di atas)
+            const latestDate = uniqueDates[0];
+            const oldestDate = uniqueDates[uniqueDates.length - 1];
+
+            // 2. Setup Filter Harian (Limit Kalender)
+            const harianInput = document.getElementById('filter-harian');
+            harianInput.min = oldestDate;
+            harianInput.max = latestDate;
+            harianInput.value = latestDate;
+
+            // 3. Ekstrak Semua Bulan Unik (YYYY-MM)
+            const uniqueMonths = [...new Set(rawData.map(d => d.tanggal.substring(0, 7)))].sort().reverse();
+            const latestMonth = uniqueMonths[0];
+            const oldestMonth = uniqueMonths[uniqueMonths.length - 1];
             
-            document.getElementById('filter-harian').value = maxDate.toISOString().split('T')[0];
-            const monthStr = (maxDate.getMonth() + 1).toString().padStart(2, '0');
-            document.getElementById('filter-mtd').value = `${maxDate.getFullYear()}-${monthStr}`;
-            
-            const years = [...new Set(rawData.map(d => d.tanggal.substring(0,4)))].sort().reverse();
+            const mtdInput = document.getElementById('filter-mtd');
+            mtdInput.min = oldestMonth;
+            mtdInput.max = latestMonth;
+            mtdInput.value = latestMonth;
+
+            // 4. Ekstrak Semua Tahun Unik (YYYY)
+            const uniqueYears = [...new Set(rawData.map(d => d.tanggal.substring(0, 4)))].sort().reverse();
             const ytdSelect = document.getElementById('filter-ytd');
             ytdSelect.innerHTML = '';
-            years.forEach(y => {
+            uniqueYears.forEach(y => {
                 const opt = document.createElement('option');
                 opt.value = y; opt.textContent = y;
                 ytdSelect.appendChild(opt);
             });
-            
+            if (uniqueYears.length > 0) ytdSelect.value = uniqueYears[0];
+
+            // 5. Update UI Info Range
+            document.getElementById('data-range-info').innerHTML = `<i class="fas fa-info-circle mr-1"></i>Data tersedia: ${oldestDate} s/d ${latestDate}`;
+
             updateDashboard();
         }
 
@@ -338,7 +345,6 @@
 
             renderTable(dataSet1, dataSet2);
 
-            // Update Kartu Utama
             const allMarketRev = filteredData.reduce((s, d) => s + d.revenue, 0);
             const oakTreeData = dataSet1.hotels.find(h => h.hotel === 'Oak Tree Emerald');
             
@@ -347,7 +353,6 @@
             document.getElementById('card-oak-occ').innerText = oakTreeData ? oakTreeData.occp.toFixed(2) + '%' : '0%';
             document.getElementById('card-oak-rgi').innerText = oakTreeData ? oakTreeData.rgi.toFixed(2) : '0.00';
 
-            // Kumpulkan semua data hotel yang terdeteksi untuk visualisasi Chart
             let allVisualDataMap = {};
             [...dataSet1.hotels, ...dataSet2.hotels].forEach(h => {
                 if (!allVisualDataMap[h.hotel]) allVisualDataMap[h.hotel] = h;
@@ -357,7 +362,6 @@
             renderCharts(allHotels, dataSet1);
         }
 
-        // Kalkulasi Matematis sesuai Format Excel Laporan
         function calculateSetData(aggMap, setArray) {
             let setHotels = [];
             let marketAvail = 0, marketSold = 0, marketRev = 0;
@@ -422,7 +426,6 @@
             let finalClass = trClass;
             if (isOak) finalClass += " row-oaktree";
 
-            // Pewarnaan Dinamis untuk sel RGI & Fair Share agar informatif
             let fairShareColor = (data.fairShare !== null && data.fairShare < 0) ? 'text-rose-400 font-bold' : (data.fairShare > 0 ? 'text-emerald-400 font-bold' : '');
             let rgiColor = (data.rgi !== null && data.rgi >= 1) ? 'text-emerald-400 font-bold' : (data.rgi !== null && data.rgi < 1 ? 'text-rose-400 font-bold' : '');
 
@@ -462,20 +465,15 @@
             document.getElementById('table-body').innerHTML = html;
         }
 
-        // --- SISTEM RENDERING 5 GRAFIK ---
         function renderCharts(allData, set1Data) {
-            
-            // Konfigurasi Warna Dasar
-            const colorOakTree = '#10b981'; // Emerald
-            const colorCompetitorBase = 'rgba(56, 189, 248, 0.7)'; // Sky Blue with opacity
+            const colorOakTree = '#10b981'; 
+            const colorCompetitorBase = 'rgba(56, 189, 248, 0.7)'; 
             const getChartColors = (labels) => labels.map(l => l === 'Oak Tree Emerald' ? colorOakTree : colorCompetitorBase);
             
-            // Urutkan All Data untuk visual berurutan (dari Occp terbesar)
             allData.sort((a,b) => b.occp - a.occp);
             const labelsAll = allData.map(d => d.hotel);
             const colorsAll = getChartColors(labelsAll);
 
-            // CHART 1: Occupancy (Semua Hotel)
             if (occpChart) occpChart.destroy();
             occpChart = new Chart(document.getElementById('occpChart'), {
                 type: 'bar',
@@ -483,11 +481,8 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
 
-            // CHART 2: Revenue Market Share (Doughnut - Semua Hotel)
             if (revShareChart) revShareChart.destroy();
-            // Palet warna yang selaras dengan tema Navy untuk Market Share
             const sharePalette = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
-            
             revShareChart = new Chart(document.getElementById('revShareChart'), {
                 type: 'doughnut',
                 data: {
@@ -496,7 +491,7 @@
                         data: allData.map(d => d.revenue),
                         backgroundColor: sharePalette,
                         borderWidth: 2,
-                        borderColor: '#1e293b' // Warna background card
+                        borderColor: '#1e293b' 
                     }]
                 },
                 options: {
@@ -509,11 +504,10 @@
                 }
             });
 
-            // CHART 3: Actual Share vs Fair Share (Hanya menggunakan data SET 1 untuk komparasi yang apple-to-apple)
             if (shareChart) shareChart.destroy();
             const set1Labels = set1Data.hotels.map(h => h.hotel);
             const actShares = set1Data.hotels.map(h => h.actShare);
-            const fairShares = set1Data.hotels.map(h => h.natShare); // Fair share aslinya = Natural Share sbg benchmark awal
+            const fairShares = set1Data.hotels.map(h => h.natShare); 
 
             shareChart = new Chart(document.getElementById('shareChart'), {
                 type: 'bar',
@@ -530,7 +524,6 @@
                 }
             });
 
-            // CHART 4: ARR vs RevPAR (Semua Hotel)
             if (arrRevParChart) arrRevParChart.destroy();
             arrRevParChart = new Chart(document.getElementById('arrRevParChart'), {
                 type: 'bar',
@@ -550,7 +543,6 @@
                 }
             });
 
-            // CHART 5: M.P.I dan R.G.I (Hanya SET 1 yang dinilai dari rata-rata pasar yg sama)
             if (indexChart) indexChart.destroy();
             indexChart = new Chart(document.getElementById('indexChart'), {
                 type: 'bar',
