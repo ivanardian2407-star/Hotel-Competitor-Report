@@ -1,514 +1,575 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Titor Report — Dashboard Kompetitif</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<style>
-:root{
-  --navy-950:#081426; --navy-900:#0d1f3c; --navy-800:#15315a; --navy-700:#1f4676;
-  --gold:#d6a656; --gold-soft:#e9cd93; --ink:#eaf1fb; --muted:#8fa3c4;
-  --line:rgba(234,241,251,.12); --good:#5fbf8f; --bad:#e2725b; --card:rgba(255,255,255,.045);
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:radial-gradient(1200px 600px at 15% -10%,#122a52,transparent),linear-gradient(180deg,var(--navy-950),var(--navy-900) 45%,var(--navy-950));
-  color:var(--ink);font-family:'Inter',sans-serif;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);}
-h1,h2,h3{font-family:'Fraunces',serif;margin:0;font-weight:600}
-.wrap{max-width:1200px;margin:0 auto;padding:28px 20px 64px}
-header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-header .eyebrow{color:var(--gold-soft);font-size:.8rem;letter-spacing:.02em}
-header h1{font-size:1.9rem;color:#fff}
-header p{color:var(--muted);margin-top:4px;font-size:.92rem}
-.live-badge{font-size:.75rem;color:var(--muted);margin-bottom:6px;background:var(--card);padding:6px 12px;border-radius:20px;border:1px solid var(--line);display:inline-block}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Competitor Dashboard - Navy Edition</title>
+    <!-- Library Eksternal -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* TEMA NAVY & SLATE */
+        body { background-color: #0f172a; color: #f8fafc; } /* Slate 900 */
+        .card-panel { background-color: #1e293b; border-color: #334155; } /* Slate 800 */
+        
+        .tab-active { border-bottom: 3px solid #38bdf8; color: #38bdf8; font-weight: 700; }
+        .tab-inactive { color: #94a3b8; font-weight: 500; }
+        .tab-inactive:hover { color: #e2e8f0; }
+        
+        /* Custom Table Styling (Dark Mode) */
+        .report-table th { background-color: #0f172a; color: #cbd5e1; position: sticky; top: 0; z-index: 10; font-size: 11px; text-transform: uppercase; border: 1px solid #334155; padding: 10px 4px; text-align: center; }
+        .report-table td { font-size: 12px; border: 1px solid #334155; padding: 8px 8px; text-align: right; white-space: nowrap; }
+        .report-table td:first-child { text-align: left; font-weight: 600; color: #e2e8f0; }
+        .row-oaktree { background-color: rgba(16, 185, 129, 0.15) !important; border-left: 3px solid #10b981; } 
+        .row-city { background-color: #020617; font-weight: bold; color: #f1f5f9; }
+        .row-avg { background-color: #0f172a; font-weight: bold; color: #94a3b8; }
+        .section-header { background-color: #334155 !important; color: #f8fafc; text-align: left !important; font-weight: bold; font-size: 13px !important; padding: 8px 12px !important;}
+        .col-rgi { background-color: rgba(56, 189, 248, 0.05); }
 
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:24px}
-.panel-head{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
-.panel-head h2{color:var(--gold-soft);font-size:1.4rem}
-.panel-head p.subtitle{color:var(--muted);font-size:.85rem;margin-top:4px;}
-
-/* Input Filters CSS */
-.dates{display:flex;gap:10px;align-items:center}
-.dates input,.dates select{background:var(--navy-950);border:1px solid var(--line);color:var(--ink);padding:8px 12px;border-radius:7px;font-family:'Inter', sans-serif;font-size:.85rem;cursor:pointer}
-.dates input:focus,.dates select:focus{outline:none;border-color:var(--gold)}
-
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.chip{border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:.8rem;cursor:pointer;user-select:none;color:var(--muted);background:var(--navy-950)}
-.chip.active{background:var(--gold);border-color:var(--gold);color:var(--navy-950);font-weight:600}
-.chip.self.active{background:var(--gold);color:var(--navy-950)}
-
-.insight-box{background:rgba(214,166,86,.1);border-left:4px solid var(--gold);padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:18px;font-size:.95rem;line-height:1.6;color:var(--ink)}
-.insight-box b{color:var(--gold-soft)}
-
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
-@media(max-width:820px){.charts{grid-template-columns:1fr}}
-.chart-box{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px;padding:16px}
-.chart-box h3{font-size:1rem;color:#fff;margin-bottom:10px;text-align:center}
-canvas{max-height:260px;width:100%}
-
-table{width:100%;border-collapse:collapse;font-size:.82rem}
-th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-th:first-child,td:first-child{text-align:left}
-th{color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
-tr.self td{color:var(--gold-soft);font-weight:600;background:rgba(214,166,86,.05)}
-tr.city td{background:rgba(255,255,255,.05);font-weight:600;color:#fff}
-.pos{color:var(--good)}.neg{color:var(--bad)}
-.tablewrap{overflow-x:auto}
-footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:26px}
-</style>
+        /* Scrollbar Customization for Tables */
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
 </head>
-<body>
-<div class="wrap">
-  <header>
-    <div>
-      <div class="eyebrow">HOTEL NOORMANS SEMARANG</div>
-      <h1>Executive Dashboard</h1>
-      <p>Analisa Kompetitif (Today, MTD, YTD)</p>
+<body class="font-sans antialiased">
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-center transition-opacity duration-300">
+        <i class="fas fa-circle-notch fa-spin text-5xl text-sky-400 mb-4"></i>
+        <h2 class="text-xl font-bold text-white">Menyinkronkan Data...</h2>
+        <p class="text-slate-400 mt-2">Menarik algoritma terbaru dari Google Sheets</p>
     </div>
-    <div style="text-align:right">
-      <div id="liveStatus" class="live-badge">⚪ Mengambil data dari Google Sheets...</div>
-    </div>
-  </header>
 
-  <div style="margin-bottom:10px;font-size:0.85rem;color:var(--muted)">Filter Hotel (Comp-set):</div>
-  <div class="chips" id="hotelChips"></div>
+    <!-- Header -->
+    <header class="card-panel border-b px-8 py-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-40 gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto">
+            <div class="bg-gradient-to-br from-sky-400 to-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-900/50">
+                <i class="fas fa-chart-line text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold leading-tight text-white tracking-wide">MARKET INTELLIGENCE</h1>
+                <p class="text-xs text-sky-400 font-semibold tracking-wider uppercase">Auto-Sync • Oak Tree Emerald</p>
+            </div>
+        </div>
+        <button onclick="fetchData()" class="bg-slate-700 text-sky-400 hover:bg-slate-600 hover:text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition shadow-sm border border-slate-600 w-full md:w-auto flex justify-center items-center">
+            <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+        </button>
+    </header>
 
-  <!-- PANEL TODAY -->
-  <div class="panel" id="panelToday">
-    <div class="panel-head">
-      <div>
-        <h2>Hari Terakhir (Today)</h2>
-        <p class="subtitle" id="todayDateStr">Memuat tanggal...</p>
-      </div>
-      <div class="dates">
-        <input type="date" id="filterTodayDate">
-      </div>
-    </div>
-    <div class="insight-box" id="insightToday">Memuat analisa...</div>
-    <div class="charts">
-      <div class="chart-box"><h3>RevPAR per Hotel (Rp)</h3><canvas id="chartTodayRevpar"></canvas></div>
-      <div class="chart-box"><h3>Market Share (Actual Share %)</h3><canvas id="chartTodayShare"></canvas></div>
-    </div>
-  </div>
+    <main class="max-w-[1400px] mx-auto px-4 md:px-8 py-8">
+        
+        <!-- Tab Control & Filters -->
+        <div class="card-panel rounded-2xl shadow-xl border p-5 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div class="flex flex-wrap gap-6 border-b border-slate-600 w-full lg:w-auto">
+                <button onclick="switchTab('harian')" id="tab-harian" class="tab-active pb-3 px-2 text-lg uppercase tracking-wide">Harian</button>
+                <button onclick="switchTab('mtd')" id="tab-mtd" class="tab-inactive pb-3 px-2 text-lg uppercase tracking-wide">MTD (Month)</button>
+                <button onclick="switchTab('ytd')" id="tab-ytd" class="tab-inactive pb-3 px-2 text-lg uppercase tracking-wide">YTD (Year)</button>
+            </div>
+            
+            <div class="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-700">
+                <span class="text-sm font-semibold text-slate-400 px-2"><i class="fas fa-filter mr-1"></i> FILTER PERIODE:</span>
+                <input type="date" id="filter-harian" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none" onchange="updateDashboard()">
+                <input type="month" id="filter-mtd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden" onchange="updateDashboard()">
+                <select id="filter-ytd" class="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none hidden w-32" onchange="updateDashboard()"></select>
+            </div>
+        </div>
 
-  <!-- PANEL MTD -->
-  <div class="panel" id="panelMTD">
-    <div class="panel-head">
-      <div>
-        <h2>Month to Date (MTD)</h2>
-        <p class="subtitle" id="mtdDateStr">Memuat bulan...</p>
-      </div>
-      <div class="dates">
-        <select id="filterMtdMonth"></select>
-        <select id="filterMtdYear"></select>
-      </div>
-    </div>
-    <div class="insight-box" id="insightMTD">Memuat analisa...</div>
-    <div class="charts">
-      <div class="chart-box"><h3>Tren Occupancy Harian (%)</h3><canvas id="chartMtdOcc"></canvas></div>
-      <div class="chart-box"><h3>Total Room Revenue (Rp)</h3><canvas id="chartMtdRev"></canvas></div>
-    </div>
-  </div>
+        <div id="no-data" class="hidden bg-rose-900/30 text-rose-400 p-8 text-center rounded-2xl border border-rose-800 shadow-sm mt-8">
+            <i class="fas fa-folder-open text-5xl mb-4 opacity-70"></i>
+            <h3 class="text-xl font-bold">Data Tidak Ditemukan</h3>
+            <p class="mt-2 text-rose-300">Belum ada input data pada tanggal atau periode yang Anda pilih.</p>
+        </div>
 
-  <!-- PANEL YTD -->
-  <div class="panel" id="panelYTD">
-    <div class="panel-head">
-      <div>
-        <h2>Year to Date (YTD)</h2>
-        <p class="subtitle" id="ytdDateStr">Memuat tahun...</p>
-      </div>
-      <div class="dates">
-        <select id="filterYtdYear"></select>
-      </div>
-    </div>
-    <div class="insight-box" id="insightYTD">Memuat analisa...</div>
-    <div class="charts">
-      <div class="chart-box"><h3>Revenue Generation Index (RGI)</h3><canvas id="chartYtdRgi"></canvas></div>
-      <div class="chart-box"><h3>Pangsa Pasar YTD (%)</h3><canvas id="chartYtdShare"></canvas></div>
-    </div>
-    <div style="margin-top:20px">
-      <h3 style="margin-bottom:12px;font-size:1rem;color:var(--muted)">Tabel Data YTD</h3>
-      <div class="tablewrap">
-        <table id="mainTable"><thead><tr>
-          <th>Hotel</th><th>Available</th><th>Room Sold</th><th>Occp %</th><th>ARR</th><th>RevPAR</th>
-          <th>Room Revenue</th><th>Nat. Share</th><th>Act. Share</th><th>Fair Share</th>
-          <th>MPI</th><th>ARI</th><th>RGI</th>
-        </tr></thead><tbody id="ytdTbody"></tbody></table>
-      </div>
-    </div>
-  </div>
+        <div id="dashboard-content">
+            <!-- Key Metrics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <h4 class="text-slate-400 text-sm font-bold mb-1 uppercase tracking-wider">Market Total Rev.</h4>
+                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-revenue">Rp 0</p>
+                    <i class="fas fa-wallet absolute right-4 bottom-4 text-4xl text-slate-700 opacity-50"></i>
+                </div>
+                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden bg-emerald-900/20">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    <h4 class="text-emerald-400 text-sm font-bold mb-1 uppercase tracking-wider">Oak Tree Revenue</h4>
+                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-oak-rev">Rp 0</p>
+                    <i class="fas fa-hand-holding-usd absolute right-4 bottom-4 text-4xl text-emerald-900 opacity-50"></i>
+                </div>
+                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden bg-emerald-900/20">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                    <h4 class="text-amber-400 text-sm font-bold mb-1 uppercase tracking-wider">Oak Tree Occ.</h4>
+                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-oak-occ">0%</p>
+                    <i class="fas fa-door-open absolute right-4 bottom-4 text-4xl text-amber-900 opacity-30"></i>
+                </div>
+                <div class="card-panel rounded-2xl shadow-lg border p-6 relative overflow-hidden bg-emerald-900/20">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                    <h4 class="text-purple-400 text-sm font-bold mb-1 uppercase tracking-wider">Oak Tree R.G.I</h4>
+                    <p class="text-2xl lg:text-3xl font-extrabold text-white" id="card-oak-rgi">0.00</p>
+                    <i class="fas fa-chart-bar absolute right-4 bottom-4 text-4xl text-purple-900 opacity-40"></i>
+                </div>
+            </div>
 
-  <footer>Sumber data: Google Sheet "HOTCOMP REPORT" (tab Input Harian) · Data diperbarui otomatis setiap 30 detik.</footer>
-</div>
+            <!-- ANALYTICS CHARTS SECTION (Expanded) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+                
+                <!-- Chart 1: Revenue Share -->
+                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-white"><i class="fas fa-chart-pie text-sky-400 mr-2"></i>Market Revenue Share</h3>
+                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Proporsi penguasaan kue pendapatan pasar.</p>
+                    </div>
+                    <div class="flex-grow relative h-64 w-full">
+                        <canvas id="revShareChart"></canvas>
+                    </div>
+                </div>
 
-<script>
-// --- CONFIGURATION ---
-const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
-const SHEET_NAME = "input harian"; 
-const SELF_HOTEL = "Noormans";
-const PALETTE = ['#d6a656','#4f7fb8','#5fbf8f','#e2725b','#9a7fd1','#4fb8b0','#c98f4f','#7f9ac9','#c96f9a'];
-const MONTH_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+                <!-- Chart 2: Occupancy Bar -->
+                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-white"><i class="fas fa-bed text-sky-400 mr-2"></i>Tingkat Hunian (%)</h3>
+                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Siapa yang paling banyak menjual kapasitas ruangnya.</p>
+                    </div>
+                    <div class="flex-grow relative h-64 w-full">
+                        <canvas id="occpChart"></canvas>
+                    </div>
+                </div>
 
-let ROWS = [], HOTELS = [], selectedHotels = new Set();
-let chartInstances = {};
+                <!-- Chart 3: Fair Share vs Actual Share -->
+                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-white"><i class="fas fa-balance-scale text-sky-400 mr-2"></i>Share Gap (Actual vs Fair)</h3>
+                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Jika batang Actual melampaui Fair, penetrasi pasar sukses.</p>
+                    </div>
+                    <div class="flex-grow relative h-64 w-full">
+                        <canvas id="shareChart"></canvas>
+                    </div>
+                </div>
 
-// --- FORMATTERS ---
-const fmtN = n => Math.round(n).toLocaleString('id-ID');
-const fmt1 = n => (isFinite(n)?n:0).toFixed(1);
-const fmt2 = n => (isFinite(n)?n:0).toFixed(2);
+                <!-- Chart 4: ARR vs RevPAR -->
+                <div class="card-panel rounded-2xl shadow-lg border p-6 lg:col-span-2 flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-white"><i class="fas fa-tags text-sky-400 mr-2"></i>Analisa Harga (ARR vs RevPAR)</h3>
+                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Gap yang terlalu jauh antara ARR (Harga Jual) dan RevPAR menunjukkan banyak kamar kosong (Loss Potential).</p>
+                    </div>
+                    <div class="flex-grow relative h-64 w-full">
+                        <canvas id="arrRevParChart"></canvas>
+                    </div>
+                </div>
 
-// Robust date parser (Mendukung format '01 Juli 2026' dan '01/07/2026')
-const toDateObj = (str) => {
-  if (str.includes('/')) {
-    const [d, m, y] = str.trim().split('/').map(Number);
-    return new Date(y, m - 1, d);
-  }
-  const parts = str.trim().split(' ');
-  if (parts.length >= 3) {
-    const d = parseInt(parts[0]);
-    const mStr = parts[1].toLowerCase();
-    const y = parseInt(parts[2]);
-    const m = MONTH_NAMES.findIndex(month => month.toLowerCase() === mStr);
-    if (m !== -1) return new Date(y, m, d);
-  }
-  return new Date(str); // fallback
-};
+                <!-- Chart 5: Performance Indices (MPI & RGI) -->
+                <div class="card-panel rounded-2xl shadow-lg border p-6 flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-white"><i class="fas fa-trophy text-amber-400 mr-2"></i>Performance Index (vs Market)</h3>
+                        <p class="text-[11px] text-slate-400 mt-1 uppercase">Index > 1.00 berarti mengalahkan rata-rata kompetitor (Set 1).</p>
+                    </div>
+                    <div class="flex-grow relative h-64 w-full">
+                        <canvas id="indexChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
-const toInputDate = d => {
-  const z = n => ('0'+n).slice(-2);
-  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
-};
+            <!-- TABEL LAPORAN LENGKAP -->
+            <div class="card-panel rounded-2xl shadow-lg border mb-8 overflow-hidden">
+                <div class="p-5 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-white"><i class="fas fa-table text-sky-400 mr-2"></i>Comprehensive Competitor Matrix</h3>
+                        <p class="text-xs text-slate-400 mt-1">Data dikalkulasi dan dikategorikan secara dinamis berdasarkan filter.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full report-table" id="full-report-table">
+                        <thead>
+                            <tr>
+                                <th class="w-48 text-left">HOTEL NAME</th>
+                                <th>AVAILABLE</th>
+                                <th>ROOM SOLD</th>
+                                <th>OCCP. (%)</th>
+                                <th>ARR (Rp)</th>
+                                <th>REV PAR (Rp)</th>
+                                <th>ROOM REVENUE (Rp)</th>
+                                <th>NAT. SHARE (%)</th>
+                                <th>ACT. SHARE (%)</th>
+                                <th>FAIR SHARE</th>
+                                <th>M.P.I</th>
+                                <th>A.R.I</th>
+                                <th class="col-rgi text-sky-300">R.G.I</th>
+                                <th>Rank RGI</th>
+                                <th>Rank Occ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Baris akan dimasukkan oleh JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+        </div>
+    </main>
 
-// --- DATA PARSING & AGGREGATION ---
-function parseCSV(text){
-  const lines = text.trim().split(/\r?\n/);
-  // Cari baris yang mengandung header tanggal/date
-  const headIdx = lines.findIndex(f => f.toLowerCase().includes('tanggal') || f.toLowerCase().includes('date'));
-  if(headIdx<0) return [];
-  
-  const head = lines[headIdx].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,''));
-  
-  // Mencari index kolom dengan fleksibel
-  const iDate = head.findIndex(h => h === 'tanggal' || h === 'date');
-  const iHotel = head.findIndex(h => h.includes('hotel'));
-  const iAvail = head.findIndex(h => h.includes('available'));
-  const iSold = head.findIndex(h => h.includes('room sold'));
-  const iRev = head.findIndex(h => h.includes('room revenue') || h.includes('revenue'));
-  
-  const out=[];
-  for(let i=headIdx+1;i<lines.length;i++){
-    // Memisah CSV koma tanpa memecah isi kutip
-    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c=>c.replace(/['"]/g,'').trim());
-    
-    if(!cols[iDate] || !cols[iHotel]) continue;
-    
-    const dateStr = cols[iDate];
-    const hotelName = cols[iHotel];
-    const avail = Number(cols[iAvail])||0;
-    const sold = Number(cols[iSold])||0;
-    const rev = Number(cols[iRev])||0;
-    
-    if(!avail && !sold) continue; // Skip baris jika available dan sold kosong
-    out.push({date: toDateObj(dateStr), dateStr, hotel: hotelName, avail, sold, rev});
-  }
-  return out;
-}
+    <script>
+        // Setujui tema Chart.js untuk Dark Mode
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = '#334155';
+        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
 
-function aggregateRows(rowsSubset){
-  const agg = {};
-  rowsSubset.forEach(r=>{
-    agg[r.hotel] = agg[r.hotel] || {avail:0,sold:0,rev:0};
-    agg[r.hotel].avail += r.avail; agg[r.hotel].sold += r.sold; agg[r.hotel].rev += r.rev;
-  });
-  
-  const hotels = Object.keys(agg);
-  const city = hotels.reduce((a,h)=>({avail:a.avail+agg[h].avail,sold:a.sold+agg[h].sold,rev:a.rev+agg[h].rev}),{avail:0,sold:0,rev:0});
-  
-  const cityOcc = city.avail ? city.sold/city.avail*100 : 0;
-  const cityArr = city.sold ? city.rev/city.sold : 0;
-  const cityRevpar = city.avail ? city.rev/city.avail : 0;
-  
-  const rows = hotels.map(h=>{
-    const a = agg[h];
-    const occ = a.avail ? a.sold/a.avail*100 : 0;
-    const arr = a.sold ? a.rev/a.sold : 0;
-    const revpar = a.avail ? a.rev/a.avail : 0;
-    const nat = city.avail ? a.avail/city.avail*100 : 0;
-    const act = city.sold ? a.sold/city.sold*100 : 0;
-    const fair = act-nat;
-    const mpi = nat ? act/nat : 0;
-    const ari = cityArr ? arr/cityArr : 0;
-    const rgi = cityRevpar ? revpar/cityRevpar : 0;
-    return {hotel:h, avail:a.avail, sold:a.sold, occ, arr, revpar, rev:a.rev, nat, act, fair, mpi, ari, rgi};
-  });
-  
-  rows.sort((a,b)=>b.rgi-a.rgi);
-  return {rows, city, cityOcc, cityArr, cityRevpar, hotels};
-}
+        const SHEET_ID = '149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU';
+        const SHEET_NAME = 'Input Harian';
+        let rawData = [];
+        let currentTab = 'harian';
 
-// --- CHART HELPER ---
-function drawChart(id, type, data, options) {
-  if (chartInstances[id]) chartInstances[id].destroy();
-  chartInstances[id] = new Chart(document.getElementById(id), { type, data, options });
-}
-const defaultOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8fa3c4'}}}, scales:{x:{ticks:{color:'#8fa3c4'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#8fa3c4'},grid:{color:'rgba(255,255,255,.05)'}}}};
-const pieOpts = {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#8fa3c4'}}}, borderwidth:0};
+        // Definisi Set Kompetitor Sesuai Gambar Laporan
+        const SET_1 = ['Oak Tree Emerald', 'Grand Edge', 'Grand Candi', 'Patra Jasa', 'Noormans', 'Wimarion'];
+        const SET_2 = ['Oak Tree Emerald', 'Ciputra', 'Aruss', 'Padma'];
 
-// --- UI FILTERS ---
-function initFilters() {
-  const filterToday = document.getElementById('filterTodayDate');
-  const filterMtdM = document.getElementById('filterMtdMonth');
-  const filterMtdY = document.getElementById('filterMtdYear');
-  const filterYtdY = document.getElementById('filterYtdYear');
-  
-  if(filterToday.value) return; 
-  
-  const years = [...new Set(ROWS.map(r=>r.date.getFullYear()))].sort((a,b)=>b-a);
-  const latestTime = Math.max(...ROWS.map(r=>r.date.getTime()));
-  const latestDate = new Date(latestTime);
+        // Variabel Chart
+        let occpChart = null, revShareChart = null, arrRevParChart = null, shareChart = null, indexChart = null;
 
-  filterToday.value = toInputDate(latestDate);
-  
-  filterMtdM.innerHTML = MONTH_NAMES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
-  filterMtdM.value = latestDate.getMonth();
-  
-  const yearOpts = years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  filterMtdY.innerHTML = yearOpts;
-  filterMtdY.value = latestDate.getFullYear();
-  
-  filterYtdY.innerHTML = yearOpts;
-  filterYtdY.value = latestDate.getFullYear();
+        async function fetchData() {
+            document.getElementById('loading').style.display = 'flex';
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+            
+            try {
+                const response = await fetch(url);
+                const csvText = await response.text();
+                
+                Papa.parse(csvText, {
+                    complete: function(results) {
+                        processRawData(results.data);
+                        document.getElementById('loading').style.display = 'none';
+                    }
+                });
+            } catch (error) {
+                alert("Gagal menarik data dari Google Sheets. Pastikan akses link terbuka.");
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
 
-  filterToday.addEventListener('change', renderTodayWrapper);
-  filterMtdM.addEventListener('change', renderMtdWrapper);
-  filterMtdY.addEventListener('change', renderMtdWrapper);
-  filterYtdY.addEventListener('change', renderYtdWrapper);
-}
+        function processRawData(data) {
+            let headerIdx = -1;
+            for (let i = 0; i < data.length; i++) {
+                if (data[i][0] === 'Tanggal') { headerIdx = i; break; }
+            }
+            if (headerIdx === -1) return;
 
-// --- RENDER LOGIC WRAPPERS ---
-function renderAll() {
-  if(!ROWS.length) return;
-  renderTodayWrapper();
-  renderMtdWrapper();
-  renderYtdWrapper();
-}
+            const processed = [];
+            for (let i = headerIdx + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row[0] || row[0].trim() === '') continue; 
+                if (isNaN(parseFloat(row[2]))) continue; 
 
-function renderTodayWrapper() {
-  const dateVal = document.getElementById('filterTodayDate').value;
-  if(!dateVal) return;
-  
-  const [y, m, d] = dateVal.split('-').map(Number);
-  const targetTime = new Date(y, m-1, d).getTime();
-  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
-  
-  const todayRows = filteredRows.filter(r => r.date.getTime() === targetTime);
-  const todayData = aggregateRows(todayRows);
-  
-  const contextStr = `${d} ${MONTH_NAMES[m-1]} ${y}`;
-  document.getElementById('todayDateStr').textContent = contextStr;
-  renderToday(todayData, contextStr);
-}
+                processed.push({
+                    tanggal: row[0],
+                    hotel: row[1].trim(),
+                    available: parseFloat(row[2]) || 0,
+                    roomSold: parseFloat(row[3]) || 0,
+                    revenue: parseFloat(row[4].replace(/,/g, '')) || 0,
+                });
+            }
+            rawData = processed;
+            setupFilters();
+        }
 
-function renderMtdWrapper() {
-  const m = parseInt(document.getElementById('filterMtdMonth').value);
-  const y = parseInt(document.getElementById('filterMtdYear').value);
-  
-  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
-  const mtdRows = filteredRows.filter(r => r.date.getMonth() === m && r.date.getFullYear() === y);
-  const mtdData = aggregateRows(mtdRows);
-  
-  const contextStr = `Bulan ${MONTH_NAMES[m]} ${y}`;
-  document.getElementById('mtdDateStr').textContent = contextStr;
-  renderMTD(mtdRows, mtdData, contextStr);
-}
+        function setupFilters() {
+            const dates = rawData.map(d => new Date(d.tanggal));
+            const maxDate = new Date(Math.max(...dates));
+            
+            document.getElementById('filter-harian').value = maxDate.toISOString().split('T')[0];
+            const monthStr = (maxDate.getMonth() + 1).toString().padStart(2, '0');
+            document.getElementById('filter-mtd').value = `${maxDate.getFullYear()}-${monthStr}`;
+            
+            const years = [...new Set(rawData.map(d => d.tanggal.substring(0,4)))].sort().reverse();
+            const ytdSelect = document.getElementById('filter-ytd');
+            ytdSelect.innerHTML = '';
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y; opt.textContent = y;
+                ytdSelect.appendChild(opt);
+            });
+            
+            updateDashboard();
+        }
 
-function renderYtdWrapper() {
-  const y = parseInt(document.getElementById('filterYtdYear').value);
-  const filteredRows = ROWS.filter(r => selectedHotels.has(r.hotel));
-  const ytdRows = filteredRows.filter(r => r.date.getFullYear() === y);
-  const ytdData = aggregateRows(ytdRows);
-  
-  const contextStr = `Tahun ${y}`;
-  document.getElementById('ytdDateStr').textContent = contextStr;
-  renderYTD(ytdData, contextStr);
-}
+        function switchTab(tab) {
+            currentTab = tab;
+            ['harian', 'mtd', 'ytd'].forEach(t => {
+                document.getElementById(`tab-${t}`).className = (t === tab) ? 'tab-active pb-3 px-2 text-lg uppercase tracking-wide' : 'tab-inactive pb-3 px-2 text-lg uppercase tracking-wide';
+                document.getElementById(`filter-${t}`).classList.toggle('hidden', t !== tab);
+            });
+            updateDashboard();
+        }
 
-// --- PANEL RENDERING ---
-function generateAnalysisText(data, contextStr) {
-    if(!data.rows.length) return "Tidak ada data pada periode ini.";
-    const bestRgi = data.rows[0];
-    const bestOcc = [...data.rows].sort((a,b)=>b.occ-a.occ)[0];
-    const bestShare = [...data.rows].sort((a,b)=>b.act-a.act)[0];
-    const self = data.rows.find(r=>r.hotel===SELF_HOTEL);
-    
-    let t = `Berdasarkan data <b>${contextStr}</b>, rata-rata tingkat hunian pasar berada di <b>${fmt2(data.cityOcc)}%</b> dengan total pendapatan mencapai <b>Rp ${fmtN(data.city.rev)}</b>. `;
-    
-    t += `Hotel <b>${bestRgi.hotel}</b> memimpin indeks RevPAR (RGI: ${fmt2(bestRgi.rgi)}), sementara <b>${bestShare.hotel}</b> menguasai pasar dengan porsi terjual (Actual Share) <b>${fmt2(bestShare.act)}%</b>. `;
-    
-    if(self) {
-        let fairStatus = self.fair >= 0 ? `surplus <b>+${fmt2(self.fair)}%</b> di atas` : `defisit <b>${fmt2(self.fair)}%</b> di bawah`;
-        t += `Untuk <b>${SELF_HOTEL}</b> mencatat Occupancy <b>${fmt2(self.occ)}%</b> dengan perolehan pangsa pasar yang ${fairStatus} porsi kewajarannya (Fair Share).`;
-    }
-    return t;
-}
+        function updateDashboard() {
+            let filteredData = [];
+            if (currentTab === 'harian') {
+                const f = document.getElementById('filter-harian').value;
+                filteredData = rawData.filter(d => d.tanggal === f);
+            } else if (currentTab === 'mtd') {
+                const f = document.getElementById('filter-mtd').value;
+                filteredData = rawData.filter(d => d.tanggal.startsWith(f));
+            } else if (currentTab === 'ytd') {
+                const f = document.getElementById('filter-ytd').value;
+                filteredData = rawData.filter(d => d.tanggal.startsWith(f));
+            }
 
-function renderToday(data, contextStr) {
-  document.getElementById('insightToday').innerHTML = generateAnalysisText(data, contextStr);
-  
-  if(!data.rows.length) {
-    if(chartInstances['chartTodayRevpar']) chartInstances['chartTodayRevpar'].destroy();
-    if(chartInstances['chartTodayShare']) chartInstances['chartTodayShare'].destroy();
-    return;
-  }
-  
-  const sorted = [...data.rows].sort((a,b)=>b.revpar-a.revpar);
-  drawChart('chartTodayRevpar', 'bar', {
-    labels: sorted.map(r=>r.hotel),
-    datasets: [{ label: 'RevPAR (Rp)', data: sorted.map(r=>r.revpar), backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488') }]
-  }, defaultOpts);
-  
-  drawChart('chartTodayShare', 'doughnut', {
-    labels: data.rows.map(r=>r.hotel),
-    datasets: [{ data: data.rows.map(r=>r.act), backgroundColor: PALETTE, borderColor: '#081426', borderWidth: 2 }]
-  }, pieOpts);
-}
+            if (filteredData.length === 0) {
+                document.getElementById('no-data').classList.remove('hidden');
+                document.getElementById('dashboard-content').classList.add('hidden');
+                return;
+            }
+            
+            document.getElementById('no-data').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
 
-function renderMTD(rawRows, data, contextStr) {
-  document.getElementById('insightMTD').innerHTML = generateAnalysisText(data, contextStr);
-  
-  if(!data.rows.length) {
-    if(chartInstances['chartMtdOcc']) chartInstances['chartMtdOcc'].destroy();
-    if(chartInstances['chartMtdRev']) chartInstances['chartMtdRev'].destroy();
-    return;
-  }
+            const aggMap = {};
+            filteredData.forEach(r => {
+                if (!aggMap[r.hotel]) aggMap[r.hotel] = { hotel: r.hotel, available: 0, roomSold: 0, revenue: 0 };
+                aggMap[r.hotel].available += r.available;
+                aggMap[r.hotel].roomSold += r.roomSold;
+                aggMap[r.hotel].revenue += r.revenue;
+            });
 
-  const dateStrs = [...new Set(rawRows.map(r=>r.dateStr))].sort((a,b)=>toDateObj(a)-toDateObj(b));
-  const lineDatasets = data.hotels.map((h,i) => {
-    const dailyOcc = dateStrs.map(ds => {
-      const rec = rawRows.find(r => r.hotel===h && r.dateStr===ds);
-      return rec && rec.avail ? (rec.sold/rec.avail)*100 : null;
-    });
-    return {
-      label: h, data: dailyOcc, 
-      borderColor: h===SELF_HOTEL ? '#d6a656' : PALETTE[i%PALETTE.length],
-      backgroundColor: 'transparent', borderWidth: h===SELF_HOTEL?3:1.5, tension: 0.3
-    };
-  });
-  
-  drawChart('chartMtdOcc', 'line', { labels: dateStrs, datasets: lineDatasets }, defaultOpts);
+            const dataSet1 = calculateSetData(aggMap, SET_1);
+            const dataSet2 = calculateSetData(aggMap, SET_2);
 
-  const sorted = [...data.rows].sort((a,b)=>b.rev-a.rev);
-  drawChart('chartMtdRev', 'bar', {
-    labels: sorted.map(r=>r.hotel),
-    datasets: [{ label: 'Room Revenue (Rp)', data: sorted.map(r=>r.rev), backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488') }]
-  }, defaultOpts);
-}
+            renderTable(dataSet1, dataSet2);
 
-function renderYTD(data, contextStr) {
-  document.getElementById('insightYTD').innerHTML = generateAnalysisText(data, contextStr);
-  
-  if(!data.rows.length) {
-    if(chartInstances['chartYtdRgi']) chartInstances['chartYtdRgi'].destroy();
-    if(chartInstances['chartYtdShare']) chartInstances['chartYtdShare'].destroy();
-    document.getElementById('ytdTbody').innerHTML = `<tr><td colspan="13" style="text-align:center">Tidak ada data</td></tr>`;
-    return;
-  }
+            // Update Kartu Utama
+            const allMarketRev = filteredData.reduce((s, d) => s + d.revenue, 0);
+            const oakTreeData = dataSet1.hotels.find(h => h.hotel === 'Oak Tree Emerald');
+            
+            document.getElementById('card-revenue').innerText = formatRp(allMarketRev);
+            document.getElementById('card-oak-rev').innerText = oakTreeData ? formatRp(oakTreeData.revenue) : 'Rp 0';
+            document.getElementById('card-oak-occ').innerText = oakTreeData ? oakTreeData.occp.toFixed(2) + '%' : '0%';
+            document.getElementById('card-oak-rgi').innerText = oakTreeData ? oakTreeData.rgi.toFixed(2) : '0.00';
 
-  const sorted = [...data.rows].sort((a,b)=>b.rgi-a.rgi);
-  let opts = JSON.parse(JSON.stringify(defaultOpts));
-  opts.indexAxis = 'y'; 
-  
-  drawChart('chartYtdRgi', 'bar', {
-    labels: sorted.map(r=>r.hotel),
-    datasets: [{ label: 'RGI', data: sorted.map(r=>r.rgi), backgroundColor: sorted.map(r=>r.hotel===SELF_HOTEL ? '#d6a656' : '#2c5488') }]
-  }, opts);
+            // Kumpulkan semua data hotel yang terdeteksi untuk visualisasi Chart
+            let allVisualDataMap = {};
+            [...dataSet1.hotels, ...dataSet2.hotels].forEach(h => {
+                if (!allVisualDataMap[h.hotel]) allVisualDataMap[h.hotel] = h;
+            });
+            const allHotels = Object.values(allVisualDataMap);
+            
+            renderCharts(allHotels, dataSet1);
+        }
 
-  drawChart('chartYtdShare', 'pie', {
-    labels: data.rows.map(r=>r.hotel),
-    datasets: [{ data: data.rows.map(r=>r.act), backgroundColor: PALETTE, borderColor: '#081426', borderWidth: 2 }]
-  }, pieOpts);
-  
-  const html = data.rows.map(r=>`<tr class="${r.hotel===SELF_HOTEL?'self':''}">
-    <td>${r.hotel}</td><td>${fmtN(r.avail)}</td><td>${fmtN(r.sold)}</td><td>${fmt2(r.occ)}</td>
-    <td>${fmtN(r.arr)}</td><td>${fmtN(r.revpar)}</td><td>${fmtN(r.rev)}</td>
-    <td>${fmt2(r.nat)}</td><td>${fmt2(r.act)}</td><td class="${r.fair>=0?'pos':'neg'}">${fmt2(r.fair)}</td>
-    <td>${fmt2(r.mpi)}</td><td>${fmt2(r.ari)}</td><td>${fmt2(r.rgi)}</td>
-  </tr>`).join('') + `<tr class="city"><td>City Result</td><td>${fmtN(data.city.avail)}</td><td>${fmtN(data.city.sold)}</td>
-    <td>${fmt2(data.cityOcc)}</td><td>${fmtN(data.cityArr)}</td><td>${fmtN(data.cityRevpar)}</td><td>${fmtN(data.city.rev)}</td>
-    <td colspan="6"></td></tr>`;
-  document.getElementById('ytdTbody').innerHTML = html;
-}
+        // Kalkulasi Matematis sesuai Format Excel Laporan
+        function calculateSetData(aggMap, setArray) {
+            let setHotels = [];
+            let marketAvail = 0, marketSold = 0, marketRev = 0;
 
-function buildChips(){
-  const box = document.getElementById('hotelChips');
-  box.innerHTML = '';
-  HOTELS.forEach(h=>{
-    const c = document.createElement('div');
-    c.className = 'chip active' + (h===SELF_HOTEL ? ' self' : '');
-    c.textContent = h;
-    c.onclick = ()=>{ 
-        selectedHotels.has(h) ? selectedHotels.delete(h) : selectedHotels.add(h);
-        c.classList.toggle('active'); 
-        renderAll(); 
-    };
-    box.appendChild(c);
-  });
-}
+            setArray.forEach(hotelName => {
+                let hd = aggMap[hotelName] ? { ...aggMap[hotelName] } : { hotel: hotelName, available: 0, roomSold: 0, revenue: 0 };
+                marketAvail += hd.available;
+                marketSold += hd.roomSold;
+                marketRev += hd.revenue;
+                setHotels.push(hd);
+            });
 
-// --- FETCH & INIT ---
-function setLiveStatus(state, note){
-  const el = document.getElementById('liveStatus');
-  const map = {
-    live: note || '🟢 Live — Data tersinkronisasi',
-    offline: note || '⚪ Menarik data...',
-    error: note || '🔴 Gagal memuat data live'
-  };
-  el.textContent = map[state] || note || '';
-}
+            let marketOcc = marketAvail ? (marketSold / marketAvail) * 100 : 0;
+            let marketArr = marketSold ? (marketRev / marketSold) : 0;
+            let marketRevPar = marketAvail ? (marketRev / marketAvail) : 0;
 
-async function fetchSheetData() {
-  setLiveStatus('offline', '⚪ Menarik data terbaru dari Google Sheets...');
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_FILE_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+            setHotels.forEach(h => {
+                h.occp = h.available ? (h.roomSold / h.available) * 100 : 0;
+                h.arr = h.roomSold ? h.revenue / h.roomSold : 0;
+                h.revPar = h.available ? h.revenue / h.available : 0;
+                h.natShare = marketAvail ? (h.available / marketAvail) * 100 : 0;
+                h.actShare = marketSold ? (h.roomSold / marketSold) * 100 : 0;
+                h.fairShare = h.actShare - h.natShare;
+                h.mpi = marketOcc ? h.occp / marketOcc : 0;
+                h.ari = marketArr ? h.arr / marketArr : 0;
+                h.rgi = marketRevPar ? h.revPar / marketRevPar : 0;
+            });
 
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Gagal terhubung ke Google Sheet.');
-    
-    const csvText = await response.text();
-    if (csvText.trim().toLowerCase().startsWith("<!doctype html>")) {
-      throw new Error('🔴 Akses Sheet masih Private. Ubah Share ke "Anyone with the link".');
-    }
+            let sortedRgi = [...setHotels].sort((a,b) => b.rgi - a.rgi);
+            let sortedOcc = [...setHotels].sort((a,b) => b.occp - a.occp);
+            
+            setHotels.forEach(h => {
+                if(h.available === 0) { h.rankRgi = '-'; h.rankOcc = '-'; } 
+                else {
+                   h.rankRgi = sortedRgi.findIndex(x => x.hotel === h.hotel) + 1;
+                   h.rankOcc = sortedOcc.findIndex(x => x.hotel === h.hotel) + 1;
+                }
+            });
 
-    const newRows = parseCSV(csvText);
-    if(newRows.length > 0) {
-      ROWS = newRows;
-      
-      if(HOTELS.length === 0) {
-          HOTELS = [...new Set(ROWS.map(r=>r.hotel))];
-          selectedHotels = new Set(HOTELS);
-          buildChips();
-      }
-      
-      initFilters();
-      renderAll();
-      
-      setLiveStatus('live', `🟢 Live — Update terakhir: ${new Date().toLocaleTimeString('id-ID')}`);
-    } else {
-      setLiveStatus('error', '🔴 Format CSV tidak sesuai atau kosong');
-    }
-    
-  } catch (error) {
-    console.error(error);
-    setLiveStatus('error', error.message);
-  }
-}
+            let n = setHotels.length;
+            return {
+                hotels: setHotels,
+                market: {
+                    hotel: 'City Result', available: marketAvail, roomSold: marketSold, occp: marketOcc, arr: marketArr, revPar: marketRevPar,
+                    revenue: marketRev, natShare: null, actShare: null, fairShare: null, mpi: null, ari: null, rgi: null, rankRgi: null, rankOcc: null
+                },
+                average: {
+                    hotel: 'AVERAGE', available: marketAvail / n, roomSold: marketSold / n,
+                    occp: setHotels.reduce((s, h) => s + h.occp, 0) / n, arr: setHotels.reduce((s, h) => s + h.arr, 0) / n, revPar: setHotels.reduce((s, h) => s + h.revPar, 0) / n,
+                    revenue: setHotels.reduce((s, h) => s + h.revenue, 0) / n,
+                    natShare: null, actShare: null, fairShare: null, mpi: null, ari: null, rgi: null, rankRgi: null, rankOcc: null
+                }
+            };
+        }
 
-// Start sequence
-fetchSheetData(); 
-setInterval(fetchSheetData, 30000); 
-</script>
+        const formatRp = (num) => num ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num) : '0';
+        const formatDec = (num, digit=2) => (num !== null && num !== undefined) ? num.toFixed(digit) : '';
+        const formatInt = (num) => num ? new Intl.NumberFormat('id-ID').format(Math.round(num)) : '0';
+
+        function renderRow(data, trClass = "") {
+            const isOak = data.hotel === 'Oak Tree Emerald';
+            let finalClass = trClass;
+            if (isOak) finalClass += " row-oaktree";
+
+            // Pewarnaan Dinamis untuk sel RGI & Fair Share agar informatif
+            let fairShareColor = (data.fairShare !== null && data.fairShare < 0) ? 'text-rose-400 font-bold' : (data.fairShare > 0 ? 'text-emerald-400 font-bold' : '');
+            let rgiColor = (data.rgi !== null && data.rgi >= 1) ? 'text-emerald-400 font-bold' : (data.rgi !== null && data.rgi < 1 ? 'text-rose-400 font-bold' : '');
+
+            return `
+                <tr class="${finalClass}">
+                    <td>${data.hotel}</td>
+                    <td>${formatInt(data.available)}</td>
+                    <td>${formatInt(data.roomSold)}</td>
+                    <td>${formatDec(data.occp)}</td>
+                    <td>${formatRp(data.arr)}</td>
+                    <td>${formatRp(data.revPar)}</td>
+                    <td>${formatRp(data.revenue)}</td>
+                    <td>${data.natShare !== null ? formatDec(data.natShare) : ''}</td>
+                    <td>${data.actShare !== null ? formatDec(data.actShare) : ''}</td>
+                    <td class="${fairShareColor}">${data.fairShare !== null ? formatDec(data.fairShare) : ''}</td>
+                    <td>${data.mpi !== null ? formatDec(data.mpi) : ''}</td>
+                    <td>${data.ari !== null ? formatDec(data.ari) : ''}</td>
+                    <td class="col-rgi ${rgiColor}">${data.rgi !== null ? formatDec(data.rgi) : ''}</td>
+                    <td>${data.rankRgi !== null ? data.rankRgi : ''}</td>
+                    <td>${data.rankOcc !== null ? data.rankOcc : ''}</td>
+                </tr>
+            `;
+        }
+
+        function renderTable(set1, set2) {
+            let html = '';
+            
+            html += `<tr><td colspan="15" class="section-header tracking-widest"><i class="fas fa-layer-group mr-2"></i>SET 1 - COMPETITOR</td></tr>`;
+            set1.hotels.forEach(h => { html += renderRow(h); });
+            html += renderRow(set1.market, "row-city");
+            html += renderRow(set1.average, "row-avg");
+
+            html += `<tr><td colspan="15" class="section-header tracking-widest mt-4 border-t-4 border-slate-900"><i class="fas fa-layer-group mr-2"></i>SET 2 - COMPETITOR</td></tr>`;
+            set2.hotels.forEach(h => { html += renderRow(h); });
+            html += renderRow(set2.market, "row-city");
+
+            document.getElementById('table-body').innerHTML = html;
+        }
+
+        // --- SISTEM RENDERING 5 GRAFIK ---
+        function renderCharts(allData, set1Data) {
+            
+            // Konfigurasi Warna Dasar
+            const colorOakTree = '#10b981'; // Emerald
+            const colorCompetitorBase = 'rgba(56, 189, 248, 0.7)'; // Sky Blue with opacity
+            const getChartColors = (labels) => labels.map(l => l === 'Oak Tree Emerald' ? colorOakTree : colorCompetitorBase);
+            
+            // Urutkan All Data untuk visual berurutan (dari Occp terbesar)
+            allData.sort((a,b) => b.occp - a.occp);
+            const labelsAll = allData.map(d => d.hotel);
+            const colorsAll = getChartColors(labelsAll);
+
+            // CHART 1: Occupancy (Semua Hotel)
+            if (occpChart) occpChart.destroy();
+            occpChart = new Chart(document.getElementById('occpChart'), {
+                type: 'bar',
+                data: { labels: labelsAll, datasets: [{ label: 'Occupancy (%)', data: allData.map(d => d.occp.toFixed(2)), backgroundColor: colorsAll, borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // CHART 2: Revenue Market Share (Doughnut - Semua Hotel)
+            if (revShareChart) revShareChart.destroy();
+            // Palet warna yang selaras dengan tema Navy untuk Market Share
+            const sharePalette = ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+            
+            revShareChart = new Chart(document.getElementById('revShareChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: labelsAll,
+                    datasets: [{
+                        data: allData.map(d => d.revenue),
+                        backgroundColor: sharePalette,
+                        borderWidth: 2,
+                        borderColor: '#1e293b' // Warna background card
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#cbd5e1', boxWidth: 12 } },
+                        tooltip: { callbacks: { label: (ctx) => ` Rp ${(ctx.raw/1000000).toFixed(1)} Jt` } }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // CHART 3: Actual Share vs Fair Share (Hanya menggunakan data SET 1 untuk komparasi yang apple-to-apple)
+            if (shareChart) shareChart.destroy();
+            const set1Labels = set1Data.hotels.map(h => h.hotel);
+            const actShares = set1Data.hotels.map(h => h.actShare);
+            const fairShares = set1Data.hotels.map(h => h.natShare); // Fair share aslinya = Natural Share sbg benchmark awal
+
+            shareChart = new Chart(document.getElementById('shareChart'), {
+                type: 'bar',
+                data: {
+                    labels: set1Labels,
+                    datasets: [
+                        { label: 'Actual Share (%)', data: actShares.map(v => v ? v.toFixed(2) : 0), backgroundColor: '#38bdf8', borderRadius: 4 },
+                        { label: 'Fair Share Target (%)', data: fairShares.map(v => v ? v.toFixed(2) : 0), type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 2, pointRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
+
+            // CHART 4: ARR vs RevPAR (Semua Hotel)
+            if (arrRevParChart) arrRevParChart.destroy();
+            arrRevParChart = new Chart(document.getElementById('arrRevParChart'), {
+                type: 'bar',
+                data: {
+                    labels: labelsAll,
+                    datasets: [
+                        { label: 'ARR', data: allData.map(d => d.arr), backgroundColor: '#475569', borderRadius: 2 },
+                        { label: 'RevPAR', data: allData.map(d => d.revPar), backgroundColor: colorsAll, borderRadius: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#cbd5e1' } },
+                        tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${formatRp(ctx.raw)}` } }
+                    }
+                }
+            });
+
+            // CHART 5: M.P.I dan R.G.I (Hanya SET 1 yang dinilai dari rata-rata pasar yg sama)
+            if (indexChart) indexChart.destroy();
+            indexChart = new Chart(document.getElementById('indexChart'), {
+                type: 'bar',
+                data: {
+                    labels: set1Labels,
+                    datasets: [
+                        { label: 'Index M.P.I (Occ)', data: set1Data.hotels.map(h => h.mpi ? h.mpi.toFixed(2) : 0), backgroundColor: '#6366f1', borderRadius: 3 },
+                        { label: 'Index R.G.I (Rev)', data: set1Data.hotels.map(h => h.rgi ? h.rgi.toFixed(2) : 0), backgroundColor: '#10b981', borderRadius: 3 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } },
+                    scales: { y: { suggestedMax: 1.5, grid: { color: '#334155' } } }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchData);
+    </script>
 </body>
 </html>
