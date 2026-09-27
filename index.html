@@ -378,7 +378,7 @@ const SHEET_FILE_ID = "149Baj64xVRbgN0-ATXezVmVvO6bt8ntKzM156-gLZSU";
 function setLiveStatus(state, note){
   const el = document.getElementById('liveStatus');
   const map = {
-    live: '🟢 Live — tersambung ke Google Sheet, auto-update tiap 1 menit',
+    live: '🟢 Live — tersambung ke Google Sheet, cek perubahan tiap 30 detik',
     offline: '⚪ Mode contoh — buka halaman ini lewat Claude agar bisa live sync',
     disconnected: '🟠 Google Drive belum terhubung/diizinkan — data memakai contoh terakhir',
     error: '🔴 Gagal memuat data live — memakai data terakhir yang berhasil'
@@ -405,7 +405,7 @@ async function initLiveSync(){
         setLiveStatus((code==='needs_reauth'||code==='server_not_connected'||code==='selection_required') ? 'disconnected' : 'error');
       }
     },
-    { refetchInterval: 60000 }
+    { refetchInterval: 30000 }
   );
 }
 
